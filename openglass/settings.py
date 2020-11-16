@@ -9,7 +9,7 @@ except:
 
 class Settings(object):
     """
-    This class stores all of the settings for openglasspy.
+    This class stores all of the settings for openglass.
     """
 
     def __init__(self, utility, config=False):

@@ -1,0 +1,20 @@
+{
+  "twitter_apis": [
+    {
+      "CONSUMER_KEY": "CONSUMER_KEY",
+      "CONSUMER_SECRET": "CONSUMER_SECRET",
+      "ACCESS_KEY": "ACCESS_KEY",
+      "ACCESS_SECRET": "ACCESS_SECRET"
+    }
+  ],
+  "telegram": {
+    "phone": "PHONE_NUMBER",
+    "username": "USERNAME",
+    "app_id": "APP_ID",
+    "api_hash": "API_HASH",
+    "servers": {
+      "test": "149.154.167.40:443",
+      "production": "149.154.167.50:443"
+    }
+  }
+}

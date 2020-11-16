@@ -1,0 +1,48 @@
+---
+attributes:
+  contributors_enabled: true or false
+  created_at: Datetime of user account
+  default_profile: true or false
+  default_profile_image: true or false
+  user_description:
+    description: Profile biography text.
+  entities:
+    entities_description:
+      urls:
+        description: Urls embedded in the profile.
+  favourites_count: Number of favourites
+  follow_request_sent: true or false
+  followers_count: Number of followers
+  following: true or false
+  friends_count: Number of friends
+  geo_enabled: true or false
+  has_extended_profile: true or false
+  id: User numeric id
+  id_str: User numeric id in string format
+  is_translation_enabled: true or false
+  is_translator: true or false
+  lang: Language defined for the user
+  listed_count: Number of listed
+  location: Location as entered in the twitter profile.
+  name: Name as entered in the twitter profile
+  notifications: true or false
+  profile_background_color: background color in html format.
+  profile_background_image_url: background image url.
+  profile_background_image_url_https: background image url in https.
+  profile_background_tile: true or false
+  profile_banner_url: Banner image url.
+  profile_image_url: Profile image url.
+  profile_image_url_https: Profile image url in https.
+  profile_link_color: Profile link color in html.
+  profile_sidebar_border_color: Profile sidebar color in html
+  profile_sidebar_fill_color: Profile sidebar fill color in html.
+  profile_text_color: Profile text color in html.
+  profile_use_background_image: true or false
+  protected: true or false
+  screen_name: Name of the account
+  statuses_count: Number of posts
+  time_zone: timezone information.
+  translator_type: twitter text translator type.
+  url: Profile url
+  utc_offset: Offset to UTC.
+  verified: true or false

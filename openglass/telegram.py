@@ -9,6 +9,7 @@ from telethon.tl.functions.messages import (GetHistoryRequest)
 from telethon.tl.types import (
     PeerChannel
 )
+from urllib.parse import urlparse
 
 class Telegram:
 
@@ -117,3 +118,31 @@ class Telegram:
                 client.sign_in(password=input('Password: '))
 
         return client
+
+
+    def parse_domains(self, res_dict):
+        filtered_dict = {}
+        for r in res_dict:
+            if r.get('media'):
+                if r['media'].get('webpage'):
+                    p = r.get("media").get("webpage").get("url")
+                    p_url = urlparse(p)
+                    if p_url.netloc in filtered_dict:
+                        filtered_dict[str(p_url.netloc)] += 1
+                    else:
+                        filtered_dict[str(p_url.netloc)] = 1
+        return filtered_dict
+
+    def parse_channel_links(self, res_dict):
+        filtered_dict = {}
+        for r in res_dict:
+            if r.get('media'):
+                if r['media'].get('webpage'):
+                    p = r.get("media").get("webpage").get("url")
+                    p_url = urlparse(p)
+                    if p_url.netloc == "t.me":
+                        if p_url.path in filtered_dict:
+                            filtered_dict[str(p_url.path)] += 1
+                        else:
+                            filtered_dict[str(p_url.path)] = 1
+        return filtered_dict

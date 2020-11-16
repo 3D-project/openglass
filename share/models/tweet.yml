@@ -1,0 +1,50 @@
+---
+attributes:
+  coordinates: Geolocation coordinates
+  created_at: Datetime of Tweet
+  entities:
+    hashtags:
+      description: Hashtags embedded in the tweet
+      multiple: true
+    symbols:
+      description: Symbols embedded in the tweet
+      multiple: true
+    urls:
+      description: Urls embedded in the tweet
+      multiple: true
+    user_mentions:
+      description: Usernames mentioned in the tweet
+      multiple: true
+  favorite_count: Number of times the tweet has been favourited
+  favorited: true or false
+  geo:
+    description: Geolocation data.
+  id: Numeric id of the tweet.
+  id_str: String id of the tweet.
+  in_reply_to_screen_name:
+    description: The user display name of the tweet this post shares.
+  in_reply_to_status_id:
+    description: The twitter ID of the tweet that this post shares.
+  in_reply_to_status_id_str:
+    description: The twitter ID of the tweet this post shares in string format.
+  in_reply_to_user_id:
+    description: The user ID of the tweet this post shares.
+  in_reply_to_user_id_str:
+    description: The user ID of the tweet this post shares in string format.
+  is_quote_status: true or false
+  lang:
+    description: The language of the post.
+  metadata:
+    iso_language_code:
+      description: The language of the post in iso format.
+    result_type:
+      description: The search endpoint that was used to retrieve the tweet.
+  place:
+    description: Geolocation data.
+  retweet_count: Number of time the tweet was retweeted.
+  retweeted: true or false.
+  source:
+    description: Source of tweet (android, web etc).
+  text:
+    description: Raw text of the post.
+  truncated: true or false

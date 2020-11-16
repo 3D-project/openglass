@@ -7,13 +7,13 @@ from .settings import Settings
 
 class Utility:
     """
-    The Utility object is shared amongst all parts of openglasspy.
+    The Utility object is shared amongst all parts of openglass.
     """
 
     def __init__(self, verbose=False):
         self.verbose = verbose
 
-        # The platform Openglasspy is running on
+        # The platform Openglass is running on
         self.platform = platform.system()
         if self.platform.endswith("BSD") or self.platform == "DragonFly":
             self.platform = "BSD"
@@ -38,7 +38,7 @@ class Utility:
 
     def get_resource_path(self, filename):
         """
-        Returns the absolute path of a resource, regardless of whether Openglasspy is installed
+        Returns the absolute path of a resource, regardless of whether Openglass is installed
         systemwide, and whether regardless of platform
         """
         prefix = "share"
@@ -47,7 +47,7 @@ class Utility:
         if self.platform == "Windows":
             filename = filename.replace("/", "\\")
 
-        if getattr(sys, "openglasspy_test_mode", False):
+        if getattr(sys, "openglass_test_mode", False):
             # Look for resources directory relative to python file
             prefix = os.path.join(
                 os.path.dirname(
@@ -68,10 +68,10 @@ class Utility:
 
         elif self.platform == "BSD" or self.platform == "Linux":
             prefix = os.path.join(
-                os.path.dirname(os.path.dirname(sys.argv[0])), "share/openglasspy"
+                os.path.dirname(os.path.dirname(sys.argv[0])), "share/openglass"
             )
 
-        elif getattr(sys, "openglasspy_test_mode", False):
+        elif getattr(sys, "openglass_test_mode", False):
             if self.platform == "Darwin":
                 prefix = os.path.join(sys._MEIPASS, "share")
             elif self.platform == "Windows":
@@ -81,29 +81,29 @@ class Utility:
 
     def build_data_dir(self):
         """
-        Returns the path of the openglasspy data directory.
+        Returns the path of the openglass data directory.
         """
         if self.platform == "Windows":
             try:
                 appdata = os.environ["APPDATA"]
-                openglasspy_data_dir = f"{appdata}\\openglasspy"
+                openglass_data_dir = f"{appdata}\\openglass"
             except:
                 # If for some reason we don't have the 'APPDATA' environment variable
                 # (like running tests in Linux while pretending to be in Windows)
-                openglasspy_data_dir = os.path.expanduser("~/.config/openglasspy")
+                openglass_data_dir = os.path.expanduser("~/.config/openglass")
         elif self.platform == "Darwin":
-            openglasspy_data_dir = os.path.expanduser(
-                "~/Library/Application Support/openglasspy"
+            openglass_data_dir = os.path.expanduser(
+                "~/Library/Application Support/openglass"
             )
         else:
-            openglasspy_data_dir = os.path.expanduser("~/.config/openglasspy")
+            openglass_data_dir = os.path.expanduser("~/.config/openglass")
 
         # Modify the data dir if running tests
-        if getattr(sys, "openglasspy_test_mode", False):
-            openglasspy_data_dir += "-testdata"
+        if getattr(sys, "openglass_test_mode", False):
+            openglass_data_dir += "-testdata"
 
-        os.makedirs(openglasspy_data_dir, 0o700, True)
-        return openglasspy_data_dir
+        os.makedirs(openglass_data_dir, 0o700, True)
+        return openglass_data_dir
 
     def build_tmp_dir(self):
         """
