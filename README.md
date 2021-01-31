@@ -17,7 +17,7 @@ pip install openglass
 Then run it with:
 
 ```sh
-onionshar --help
+openglass --help
 ```
 
 ## Run queries
