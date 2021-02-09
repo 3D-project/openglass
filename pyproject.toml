@@ -9,6 +9,8 @@ python = "^3.8"
 tweepy = "^3.9.0"
 Telethon = "^1.17.5"
 six = "^1.15.0"
+Sphinx = "^3.4.3"
+recommonmark = "^0.7.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
