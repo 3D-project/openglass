@@ -24,6 +24,13 @@ disinformation campaigns.
 .. _Telegram: https://www.telegram.org
 .. _OSINT: https://en.wikipedia.org/wiki/Open-source_intelligence
 
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+
 =================
  Getting Started
 =================
