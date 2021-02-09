@@ -13,7 +13,7 @@ Welcome to OpenGlass's documentation!
 OpenGlass is a tool to query various social network and search for different
 types of information.
 
-At this moment it is in it's alpha version and supports limited search functionalities
+At this moment it is in alpha version and supports limited search functionalities
 for Twitter_ and Telegram_.
 
 OpenGlass was designed as an OSINT_ tool to identify and discover
