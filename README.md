@@ -20,47 +20,6 @@ Then run it with:
 openglass --help
 ```
 
-## Run queries
+## Documentation
 
-To do a query on twitter use the `--twitter switch`:
-
-```
---twitter
---search SEARCH QUERY
-                           Specify the term to search
---timeline USERNAME OR ID
-                           Specify the user to retrieve its timeline
---profile USERNAME OR ID
-                           Specify the user to retrieve its profile
---followers USERNAME OR ID
-                           Specify the user to retrieve its profile
-```
-
-Run a query with:
-
-```
-sh
-openglass --config config.json --twitter --search "@twitter"
-```
-
-To query telegram you need to use the ``--telegram`` switch
-
-```
-
---telegram
---channel-users CHANNEL ID
-                           Query telegram channels and return its users in json
- --channel-messages CHANNEL ID
-                           Query telegram channels and return its messages in json
-```
-
-To do a query in Telegram run:
-
-```
-sh
-openglass --config config.json --telegram --channel-users "ChannelID"
-
-```
-
-
-The switch ` --csv ` prints result to a file called result.csv
+Documentation available on https://openglass.readthedocs.io/en/latest/
