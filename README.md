@@ -8,8 +8,7 @@ If you want to contribute please do get in touch.
 
 ## Installing
 
-```
-sh
+```sh
 pip install openglass
 
 ```
