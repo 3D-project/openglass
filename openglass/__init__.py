@@ -169,7 +169,7 @@ def main(cwd=None):
 
         t = Twitter(utility.get_setting('twitter_apis'))
         if search:
-            res = t.search(q_search)['statuses']
+            res = t.search(q_search)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_search, epoch_time))
             else:
