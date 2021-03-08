@@ -14,6 +14,10 @@ class Twitter:
         self.api = self.__authenticate(self.api_in_use)
         self.current_url = ''
 
+    def get_retweeters(self, tweet_id):
+        self.current_url = '/statuses/retweeters/ids'
+        return  [ retweeter for retweeter in self.__limit_handled(tweepy.Cursor(self.api.retweeters, id=tweet_id).items()) ]
+
     def get_followers(self, user):
         self.current_url = '/followers/list'
         return [ follower._json for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items()) ]

@@ -53,67 +53,63 @@ def main(cwd=None):
         action='store_true',
         help="Query the twitter endpoints. Use search to search, timeline for user's statuses, profile for user's profile",
     )
-
     parser.add_argument(
         "--search",
         metavar="SEARCH QUERY",
         default=None,
         help="Specify the term to search",
     )
-
     parser.add_argument(
         "--timeline",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve its timeline",
     )
-
     parser.add_argument(
         "--profile",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve its profile",
     )
-
     parser.add_argument(
         "--followers",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve its profile",
     )
-
+    parser.add_argument(
+        "--retweeters",
+        metavar="Tweet ID",
+        default=None,
+        help="Specify the Tweet id to retrieve the retweeters",
+    )
     parser.add_argument(
         "--telegram",
         action='store_true',
         help="Query telegram enpoints",
     )
-
     parser.add_argument(
         "--channel-users",
         metavar="CHANNEL ID",
         default=None,
         help="Query telegram channels and return its users in json",
     )
-
     parser.add_argument(
         "--channel-messages",
         metavar="CHANNEL ID",
         default=None,
         help="Query telegram channels and return its messages in json",
     )
-
     parser.add_argument(
         "--domains",
         action='store_true',
         help="Parse links"
     )
-
     parser.add_argument(
         "--channel-links",
         action='store_true',
         help="Parse links to telegram channels"
     )
-
 
     args = parser.parse_args()
 
@@ -130,6 +126,8 @@ def main(cwd=None):
     q_profile = args.profile
     followers = bool(args.followers)
     q_followers = args.followers
+    retweeters = bool(args.retweeters)
+    q_retweeters = args.retweeters
     telegram = bool(args.telegram)
     channel_users = bool(args.channel_users)
     q_channel_users = args.channel_users
@@ -153,6 +151,22 @@ def main(cwd=None):
             print(
                 "Openglass settings {}".format(utility.print_settings())
             )
+        sys.exit()
+
+    if not telegram and not twitter:
+        print(parser.print_help())
+        sys.exit()
+
+    if telegram and twitter:
+        print(parser.print_help())
+        sys.exit()
+
+    if twitter and not search and not timeline and not profile and not followers and not retweeters:
+        print(parser.print_help())
+        sys.exit()
+
+    if telegram and not channel_users and not channel_messages:
+        print(parser.print_help())
         sys.exit()
 
     # Re-load settings, if a custom config was passed in
@@ -193,6 +207,13 @@ def main(cwd=None):
             res = t.get_followers(q_followers)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_followers, epoch_time))
+            else:
+                print(json.dumps(res, indent=4, sort_keys=True))
+            sys.exit()
+        elif retweeters:
+            res = t.get_retweeters(q_retweeters)
+            if csv:
+                save_as_csv(res, "{}-{}.csv".format(q_retweeters, epoch_time))
             else:
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
