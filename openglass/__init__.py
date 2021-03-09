@@ -154,19 +154,19 @@ def main(cwd=None):
         sys.exit()
 
     if not telegram and not twitter:
-        print(parser.print_help())
+        parser.print_help()
         sys.exit()
 
     if telegram and twitter:
-        print(parser.print_help())
+        parser.print_help()
         sys.exit()
 
     if twitter and not search and not timeline and not profile and not followers and not retweeters:
-        print(parser.print_help())
+        parser.print_help()
         sys.exit()
 
     if telegram and not channel_users and not channel_messages:
-        print(parser.print_help())
+        parser.print_help()
         sys.exit()
 
     # Re-load settings, if a custom config was passed in
