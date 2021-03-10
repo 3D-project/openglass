@@ -259,7 +259,7 @@ def main(cwd=None):
         elif profile:
             res = t.get_profile(q_profile)
             if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_profile, epoch_time))
+                save_as_csv([res], "{}-{}.csv".format(q_profile, epoch_time))
             else:
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
