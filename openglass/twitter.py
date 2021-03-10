@@ -2,6 +2,14 @@ import json
 import time
 import tweepy
 
+class StreamListener(tweepy.StreamListener):
+    def __init__(self, callback):
+        self.callback = callback
+        super().__init__()
+
+    def on_status(self, status):
+        self.callback(status._json)
+
 class Twitter:
 
     def __init__(self, twitter_apis):
@@ -26,13 +34,23 @@ class Twitter:
         self.current_url = '/users/show'
         return self.api.get_user(id=user)._json
 
-    def get_statuses(self, user):
+    def get_timeline(self, user):
         self.current_url = '/statuses/user_timeline'
         return [ tweet._json for tweet in self.__limit_handled(tweepy.Cursor(self.api.user_timeline, id=user).items()) ]
+
+    def get_timeline_new(self, users, callback):
+        stream_listener = StreamListener(callback)
+        stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
+        stream.filter(follow=users.split(' '))
 
     def search(self, q):
         self.current_url = '/search/tweets'
         return [ tweet._json for tweet in self.__limit_handled(tweepy.Cursor(self.api.search, q=q).items()) ]
+
+    def search_new(self, q, callback):
+        stream_listener = StreamListener(callback)
+        stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
+        stream.filter(track=q.split(' '))
 
     def __authenticate(self, credentials):
         auth = tweepy.OAuthHandler(credentials['CONSUMER_KEY'], credentials['CONSUMER_SECRET'])

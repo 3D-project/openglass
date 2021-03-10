@@ -1,4 +1,5 @@
 import argparse
+import os
 import csv
 from datetime import date, datetime
 import json
@@ -60,8 +61,20 @@ def main(cwd=None):
         help="Specify the term to search",
     )
     parser.add_argument(
+        "--search-new",
+        metavar="SEARCH QUERY",
+        default=None,
+        help="Specify the term to search",
+    )
+    parser.add_argument(
         "--timeline",
         metavar="USERNAME OR ID",
+        default=None,
+        help="Specify the user to retrieve its timeline",
+    )
+    parser.add_argument(
+        "--timeline-new",
+        metavar="users IDs separated with spaces",
         default=None,
         help="Specify the user to retrieve its timeline",
     )
@@ -120,8 +133,12 @@ def main(cwd=None):
     twitter = bool(args.twitter)
     timeline = bool(args.timeline)
     q_timeline = args.timeline
+    timeline_new = bool(args.timeline_new)
+    q_timeline_new = args.timeline_new
     search = bool(args.search)
     q_search = args.search
+    search_new = bool(args.search_new)
+    q_search_new = args.search_new
     profile = bool(args.profile)
     q_profile = args.profile
     followers = bool(args.followers)
@@ -161,11 +178,30 @@ def main(cwd=None):
         parser.print_help()
         sys.exit()
 
-    if twitter and not search and not timeline and not profile and not followers and not retweeters:
-        parser.print_help()
-        sys.exit()
+    num_actions = 0
+    if twitter:
+        if search:
+            num_actions += 1
+        if search_new:
+            num_actions += 1
+        if timeline:
+            num_actions += 1
+        if timeline_new:
+            num_actions += 1
+        if profile:
+            num_actions += 1
+        if followers:
+            num_actions += 1
+        if retweeters:
+            num_actions += 1
 
-    if telegram and not channel_users and not channel_messages:
+    if telegram:
+        if channel_users:
+            num_actions += 1
+        if channel_messages:
+            num_actions += 1
+
+    if num_actions != 1:
         parser.print_help()
         sys.exit()
 
@@ -189,13 +225,37 @@ def main(cwd=None):
             else:
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
+        if search_new:
+            print('Press Ctrl-C to exit')
+            csv_name = "{}-{}.csv".format(q_search_new.replace(' ', '_'), epoch_time)
+            def callback(entry):
+                if csv:
+                    save_as_csv([entry], csv_name)
+                else:
+                    print(json.dumps(entry, indent=4, sort_keys=True))
+            try:
+                t.search_new(q_search_new, callback)
+            except KeyboardInterrupt:
+                sys.exit()
         elif timeline:
-            res = t.get_statuses(q_timeline)
+            res = t.get_timeline(q_timeline)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_timeline, epoch_time))
             else:
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
+        elif timeline_new:
+            print('Press Ctrl-C to exit')
+            csv_name = "{}-{}.csv".format(q_timeline_new.replace(' ', '_'), epoch_time)
+            def callback(entry):
+                if csv:
+                    save_as_csv([entry], csv_name)
+                else:
+                    print(json.dumps(entry, indent=4, sort_keys=True))
+            try:
+                t.get_timeline_new(q_timeline_new)
+            except KeyboardInterrupt:
+                sys.exit()
         elif profile:
             res = t.get_profile(q_profile)
             if csv:
@@ -251,13 +311,23 @@ def save_as_csv(res_dict, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
     """
-    with open(csvfile, 'w', newline='') as csvfile:
+
+    if not os.path.isfile(csvfile):
+        csvfile = open(csvfile, 'w', newline='')
         fieldnames = res_dict[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
                                          extrasaction='ignore', delimiter = ';')
         writer.writeheader()
-        for r in res_dict:
-            writer.writerow(r)
+    else:
+        csvfile = open(csvfile, 'a', newline='')
+        fieldnames = res_dict[0].keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
+                                         extrasaction='ignore', delimiter = ';')
+
+    for r in res_dict:
+        writer.writerow(r)
+
+    csvfile.close()
 
 def search_dict(res_dict, query_value):
     filtered_dict = []
