@@ -30,6 +30,33 @@ class Twitter:
         self.current_url = '/statuses/retweeters/ids'
         return [ standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}) for retweeter in self.__limit_handled(tweepy.Cursor(self.api.retweeters, id=tweet_id).items()) ]
 
+    def get_retweeters_new(self, tweet_id, run_for):
+        self.current_url = '/statuses/retweeters/ids'
+        start_time = time.time()
+        retweeters = []
+        MINS_5 = 5 * 60
+        HOURS_5 = 5 * 60 * 60
+        sleeping_time = MINS_5
+        while True:
+            try:
+                new_retweeters = self.get_retweeters(tweet_id)
+                num_new_retweeters = 0
+                for new_retweeter in new_retweeters:
+                    if new_retweeter['retweeter_id'] not in retweeters:
+                        num_new_retweeters += 1
+                        retweeters.append(new_retweeter['retweeter_id'])
+
+                if run_for and time.time() - start_time > run_for:
+                    return retweeters
+
+                change = -0.015 * num_new_retweeters + 2
+                sleeping_time *= change
+                if sleeping_time > HOURS_5:
+                    sleeping_time = HOURS_5
+                time.sleep(sleeping_time)
+            except KeyboardInterrupt:
+                return retweeters
+
     def get_followers(self, user):
         self.current_url = '/followers/list'
         return [ standarize_entry(self, follower._json) for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items()) ]

@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import csv
 from datetime import date, datetime
 import json
@@ -97,6 +98,18 @@ def main(cwd=None):
         help="Specify the Tweet id to retrieve the retweeters",
     )
     parser.add_argument(
+        "--retweeters-new",
+        metavar="Tweet ID",
+        default=None,
+        help="Specify the Tweet id to retrieve the new retweeters",
+    )
+    parser.add_argument(
+        "--run-for",
+        metavar="Amount of time",
+        default=None,
+        help="Specify for how long should openglass run. Example 100s, 5h, 3d",
+    )
+    parser.add_argument(
         "--telegram",
         action='store_true',
         help="Query telegram enpoints",
@@ -145,11 +158,15 @@ def main(cwd=None):
     q_followers = args.followers
     retweeters = bool(args.retweeters)
     q_retweeters = args.retweeters
+    retweeters_new = bool(args.retweeters_new)
+    q_retweeters_new = args.retweeters_new
     telegram = bool(args.telegram)
     channel_users = bool(args.channel_users)
     q_channel_users = args.channel_users
     channel_links = bool(args.channel_links)
     channel_messages = bool(args.channel_messages)
+    run_for = bool(args.run_for)
+    q_run_for = args.run_for
     q_channel_messages = args.channel_messages
     config_filename = args.config
 
@@ -194,6 +211,8 @@ def main(cwd=None):
             num_actions += 1
         if retweeters:
             num_actions += 1
+        if retweeters_new:
+            num_actions += 1
 
     if telegram:
         if channel_users:
@@ -204,6 +223,25 @@ def main(cwd=None):
     if num_actions != 1:
         parser.print_help()
         sys.exit()
+
+    if (run_for and telegram) or (run_for and (search or timeline or profile or followers or retweeters)):
+        parser.print_help()
+        sys.exit()
+
+    if run_for:
+        if re.search(r'\d+[smhd]', q_run_for) is None:
+            parser.print_help()
+            sys.exit()
+        amount = q_run_for[:-1]
+        span = q_run_for[-1]
+        if span == 's':
+            q_run_for = int(amount)
+        if span == 'm':
+            q_run_for = int(amount) * 60
+        if span == 'h':
+            q_run_for = int(amount) * 60 * 60
+        if span == 'd':
+            q_run_for = int(amount) * 24 * 60 * 60
 
     # Re-load settings, if a custom config was passed in
     if config_filename:
@@ -226,13 +264,16 @@ def main(cwd=None):
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
         if search_new:
-            print('Press Ctrl-C to exit')
+            if not run_for:
+                print('Press Ctrl-C to exit')
             csv_name = "{}-{}.csv".format(q_search_new.replace(' ', '_'), epoch_time)
             def callback(entry):
                 if csv:
                     save_as_csv([entry], csv_name)
                 else:
                     print(json.dumps(entry, indent=4, sort_keys=True))
+                if run_for and time.time() - epoch_time > q_run_for:
+                    sys.exit()
             try:
                 t.search_new(q_search_new, callback)
             except KeyboardInterrupt:
@@ -245,13 +286,17 @@ def main(cwd=None):
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
         elif timeline_new:
-            print('Press Ctrl-C to exit')
+            if not run_for:
+                print('Press Ctrl-C to exit')
+                q_run_for = None
             csv_name = "{}-{}.csv".format(q_timeline_new.replace(' ', '_'), epoch_time)
             def callback(entry):
                 if csv:
                     save_as_csv([entry], csv_name)
                 else:
                     print(json.dumps(entry, indent=4, sort_keys=True))
+                if run_for and time.time() - epoch_time > q_run_for:
+                    sys.exit()
             try:
                 t.get_timeline_new(q_timeline_new)
             except KeyboardInterrupt:
@@ -274,6 +319,16 @@ def main(cwd=None):
             res = t.get_retweeters(q_retweeters)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_retweeters, epoch_time))
+            else:
+                print(json.dumps(res, indent=4, sort_keys=True))
+            sys.exit()
+        elif retweeters_new:
+            if not run_for:
+                print('Press Ctrl-C to exit')
+                q_run_for = None
+            res = t.get_retweeters_new(q_retweeters_new, q_run_for)
+            if csv:
+                save_as_csv(res, "{}-{}.csv".format(q_retweeters_new, epoch_time))
             else:
                 print(json.dumps(res, indent=4, sort_keys=True))
             sys.exit()
