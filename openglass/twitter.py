@@ -3,6 +3,7 @@ import time
 import tweepy
 import uuid
 
+
 class StreamListener(tweepy.StreamListener):
     def __init__(self, callback, search_id, current_url):
         self.callback = callback
@@ -12,6 +13,7 @@ class StreamListener(tweepy.StreamListener):
 
     def on_status(self, status):
         self.callback(standarize_entry(self, status._json))
+
 
 class Twitter:
 
@@ -28,7 +30,7 @@ class Twitter:
 
     def get_retweeters(self, tweet_id):
         self.current_url = '/statuses/retweeters/ids'
-        return [ standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}) for retweeter in self.__limit_handled(tweepy.Cursor(self.api.retweeters, id=tweet_id).items()) ]
+        return [standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}) for retweeter in self.__limit_handled(tweepy.Cursor(self.api.retweeters, id=tweet_id).items())]
 
     def get_retweeters_new(self, tweet_id, run_for):
         self.current_url = '/statuses/retweeters/ids'
@@ -59,7 +61,7 @@ class Twitter:
 
     def get_followers(self, user):
         self.current_url = '/followers/list'
-        return [ standarize_entry(self, follower._json) for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items()) ]
+        return [standarize_entry(self, follower._json) for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items())]
 
     def get_profile(self, user):
         self.current_url = '/users/show'
@@ -67,7 +69,7 @@ class Twitter:
 
     def get_timeline(self, user):
         self.current_url = '/statuses/user_timeline'
-        return [ standarize_entry(self, tweet._json) for tweet in self.__limit_handled(tweepy.Cursor(self.api.user_timeline, id=user).items()) ]
+        return [standarize_entry(self, tweet._json) for tweet in self.__limit_handled(tweepy.Cursor(self.api.user_timeline, id=user).items())]
 
     def get_timeline_new(self, users, callback):
         self.current_url = '/statuses/user_timeline'
@@ -77,7 +79,7 @@ class Twitter:
 
     def search(self, q):
         self.current_url = '/search/tweets'
-        return [ standarize_entry(self, tweet._json) for tweet in self.__limit_handled(tweepy.Cursor(self.api.search, q=q).items()) ]
+        return [standarize_entry(self, tweet._json) for tweet in self.__limit_handled(tweepy.Cursor(self.api.search, q=q).items())]
 
     def search_new(self, q, callback):
         self.current_url = '/search/tweets'
@@ -109,7 +111,7 @@ class Twitter:
         now = time.time()
         self.api_in_use['expired_at'][self.current_url] = now
 
-        valid_apis = [ twitter_api for twitter_api in self.twitter_apis if self.current_url not in twitter_api['expired_at'] or now - twitter_api['expired_at'][self.current_url] >= 15 * 60 ]
+        valid_apis = [twitter_api for twitter_api in self.twitter_apis if self.current_url not in twitter_api['expired_at'] or now - twitter_api['expired_at'][self.current_url] >= 15 * 60]
         if len(valid_apis) > 0:
             self.api_in_use = valid_apis[0]
             self.api = self.__authenticate(self.api_in_use)
@@ -119,6 +121,7 @@ class Twitter:
             time_expired = now - self.api_in_use['expired_at'][self.current_url]
             self.api = self.__authenticate(self.api_in_use)
             time.sleep(15 * 60 - time_expired)
+
 
 def standarize_entry(obj, entry):
     keys_to_delete = ['id_str', 'profile_background_color', 'profile_link_color', 'profile_sidebar_border_color', 'profile_sidebar_fill_color', 'profile_text_color', 'favorited', 'filter_level']

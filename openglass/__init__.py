@@ -10,6 +10,7 @@ from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
 
+
 def main(cwd=None):
     """
     The main() function implements all of the logic that the command-line version of
@@ -267,6 +268,7 @@ def main(cwd=None):
             if not run_for:
                 print('Press Ctrl-C to exit')
             csv_name = "{}-{}.csv".format(q_search_new.replace(' ', '_'), epoch_time)
+
             def callback(entry):
                 if csv:
                     save_as_csv([entry], csv_name)
@@ -290,6 +292,7 @@ def main(cwd=None):
                 print('Press Ctrl-C to exit')
                 q_run_for = None
             csv_name = "{}-{}.csv".format(q_timeline_new.replace(' ', '_'), epoch_time)
+
             def callback(entry):
                 if csv:
                     save_as_csv([entry], csv_name)
@@ -362,6 +365,7 @@ def main(cwd=None):
                 print(json.dumps(res, indent=4, sort_keys=True, cls=DateTimeEncoder))
             sys.exit()
 
+
 def save_as_csv(res_dict, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
@@ -371,18 +375,19 @@ def save_as_csv(res_dict, csvfile):
         csvfile = open(csvfile, 'w', newline='')
         fieldnames = res_dict[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                         extrasaction='ignore', delimiter = ';')
+                                extrasaction='ignore', delimiter=';')
         writer.writeheader()
     else:
         csvfile = open(csvfile, 'a', newline='')
         fieldnames = res_dict[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                         extrasaction='ignore', delimiter = ';')
+                                extrasaction='ignore', delimiter=';')
 
     for r in res_dict:
         writer.writerow(r)
 
     csvfile.close()
+
 
 def search_dict(res_dict, query_value):
     filtered_dict = []
@@ -396,12 +401,13 @@ def search_dict(res_dict, query_value):
 def getpath(nested_dict, value, prepath=()):
     for k, v in nested_dict.items():
         path = prepath + (k,)
-        if value in str(v): # found value
+        if value in str(v):  # found value
             return path
-        elif hasattr(v, 'items'): # v is a dict
-            p = getpath(v, value, path) # recursive call
+        elif hasattr(v, 'items'):  # v is a dict
+            p = getpath(v, value, path)  # recursive call
             if p is not None:
                 return p
+
 
 # some functions to parse json date
 class DateTimeEncoder(json.JSONEncoder):
@@ -413,6 +419,7 @@ class DateTimeEncoder(json.JSONEncoder):
             return list(o)
 
         return json.JSONEncoder.default(self, o)
+
 
 if __name__ == "__main__":
     main()
