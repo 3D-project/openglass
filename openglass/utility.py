@@ -5,6 +5,7 @@ import sys
 
 from .settings import Settings
 
+
 class Utility:
     """
     The Utility object is shared amongst all parts of openglass.
@@ -87,7 +88,7 @@ class Utility:
             try:
                 appdata = os.environ["APPDATA"]
                 openglass_data_dir = f"{appdata}\\openglass"
-            except:
+            except Exception as e:
                 # If for some reason we don't have the 'APPDATA' environment variable
                 # (like running tests in Linux while pretending to be in Windows)
                 openglass_data_dir = os.path.expanduser("~/.config/openglass")
