@@ -18,7 +18,9 @@ class Utility:
         if self.platform.endswith("BSD") or self.platform == "DragonFly":
             self.platform = "BSD"
 
-        with open(self.get_resource_path("version.txt")) as f:
+        path = os.path.dirname(os.path.realpath(__file__))
+        path = os.path.join(path, "version.txt")
+        with open(path) as f:
             self.version = f.read().strip()
 
     def load_settings(self, config=None):
@@ -35,49 +37,6 @@ class Utility:
 
     def get_setting(self, value):
         return self.settings.get(value)
-
-    def get_resource_path(self, filename):
-        """
-        Returns the absolute path of a resource, regardless of whether Openglass is installed
-        systemwide, and whether regardless of platform
-        """
-        prefix = "share"
-
-        # On Windows, and in Windows dev mode, switch slashes in incoming filename to backslackes
-        if self.platform == "Windows":
-            filename = filename.replace("/", "\\")
-
-        if getattr(sys, "openglass_test_mode", False):
-            # Look for resources directory relative to python file
-            prefix = os.path.join(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.abspath(inspect.getfile(inspect.currentframe()))
-                    )
-                ),
-                "share",
-            )
-            if not os.path.exists(prefix):
-                # While running tests during stdeb bdist_deb, look 3 directories up for the share folder
-                prefix = os.path.join(
-                    os.path.dirname(
-                        os.path.dirname(os.path.dirname(os.path.dirname(prefix)))
-                    ),
-                    "share",
-                )
-
-        elif self.platform == "BSD" or self.platform == "Linux":
-            prefix = os.path.join(
-                os.path.dirname(os.path.dirname(sys.argv[0])), "share/openglass"
-            )
-
-        elif getattr(sys, "openglass_test_mode", False):
-            if self.platform == "Darwin":
-                prefix = os.path.join(sys._MEIPASS, "share")
-            elif self.platform == "Windows":
-                prefix = os.path.join(os.path.dirname(sys.executable), "share")
-
-        return os.path.join(prefix, filename)
 
     def build_data_dir(self):
         """
