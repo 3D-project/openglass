@@ -56,6 +56,8 @@ class Twitter:
                         num_new_retweeters += 1
                         retweeters_ids.append(new_retweeter['retweeter_id'])
                         retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': new_retweeter['retweeter_id']}))
+                if num_new_retweeters > 0:
+                    print('Number of results: {}'.format(len(retweeters_ids), end='\r'))
 
                 # update how much we wait until the next request
                 # if we got 0 new retweets, double the time
