@@ -160,14 +160,12 @@ class Twitter:
                     users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
 
                 users_data[user_id]['tweets'][tweet_id]['retweeters'].append(tweet)
-                num = num_results(users_data)
-                print('Number of results: {}'.format(num), end='\r')
+                print('Number of results: {}'.format(num_results(users_data)), end='\r')
             elif is_own_tweet:
                 users_data[user_id]['tweets'][tweet_id] = {}
                 users_data[user_id]['tweets'][tweet_id]['new_tweet'] = tweet
                 users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
-                num = num_results(users_data)
-                print('Number of results: {}'.format(num), end='\r')
+                print('Number of results: {}'.format(num_results(users_data)), end='\r')
             else:
                 pass  # somebody responded a tweet
 
