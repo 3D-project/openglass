@@ -37,43 +37,35 @@ class Twitter:
             self.type = 'get_retweeters'
         return [standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}) for retweeter in self.__limit_handled(tweepy.Cursor(self.api.retweeters, id=tweet_id).items())]
 
-    def get_retweeters_new(self, tweet_id, run_for):
+    def get_retweeters_new(self, tweet_ids, run_for):
         '''returns the new retweeters from a given tweet'''
         self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters_new'
+
         start_time = time.time()
-        retweeters_ids = []
+        tweets = [tweet._json for tweet in self.api.statuses_lookup(tweet_ids)]
+        user_ids = [tweet['user']['id_str'] for tweet in tweets]
         retweeters = []
-        MINS_5 = 5 * 60
-        HOURS_5 = 5 * 60 * 60
-        sleeping_time = MINS_5
-        while True:
-            try:
-                new_retweeters = self.get_retweeters(tweet_id)
-                num_new_retweeters = 0
-                for new_retweeter in new_retweeters:
-                    if new_retweeter['retweeter_id'] not in retweeters_ids:
-                        num_new_retweeters += 1
-                        retweeters_ids.append(new_retweeter['retweeter_id'])
-                        retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': new_retweeter['retweeter_id']}))
-                if self.type == 'get_retweeters_new' and num_new_retweeters > 0:
-                    print('Number of results: {}'.format(len(retweeters_ids), end='\r'))
+        print('Number of results: 0', end='\r')
 
-                # update how much we wait until the next request
-                # if we got 0 new retweets, double the time
-                # if we got 100 new retweets, divide it by 2
-                change = -0.015 * num_new_retweeters + 2
-                sleeping_time *= change
-                # don't wait for more than 5 hours
-                sleeping_time = min(sleeping_time, HOURS_5)
+        def callback(tweet):
+            if run_for and time.time() - start_time > run_for:
+                raise KeyboardInterrupt
+            if 'retweeted_status' not in tweet:
+                return
+            if tweet['retweeted_status']['id_str'] not in tweet_ids:
+                return
 
-                if run_for and time.time() + sleeping_time - start_time > run_for:
-                    return retweeters
+            retweeters.append(standarize_entry(self, tweet))
+            print('Number of results: {}'.format(len(retweeters)), end='\r')
 
-                time.sleep(sleeping_time)
-            except KeyboardInterrupt:
-                return retweeters
+        try:
+            self.get_timeline_new(user_ids, callback)
+        except KeyboardInterrupt:
+            pass
+
+        return retweeters
 
     def get_followers(self, user):
         '''returns the followers of a user, ordered from new to old'''

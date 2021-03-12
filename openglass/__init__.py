@@ -105,9 +105,9 @@ def main(cwd=None):
     )
     parser.add_argument(
         "--retweeters-new",
-        metavar="Tweet ID",
+        metavar="Tweet IDs separated with spaces",
         default=None,
-        help="Specify the Tweet id to retrieve the new retweeters",
+        help="Specify the Tweet ids to retrieve the new retweeters",
     )
     parser.add_argument(
         "--run-for",
@@ -307,6 +307,7 @@ def main(cwd=None):
                 if run_for and time.time() - epoch_time > q_run_for:
                     save_result()
                     sys.exit()
+            print('Number of results: 0', end='\r')
             try:
                 t.search_new(q_search_new, callback)
             except KeyboardInterrupt:
@@ -342,6 +343,7 @@ def main(cwd=None):
                 if run_for and time.time() - epoch_time > q_run_for:
                     save_result()
                     sys.exit()
+            print('Number of results: 0', end='\r')
             try:
                 t.get_timeline_new(q_timeline_new.split(' '), callback)
             except KeyboardInterrupt:
@@ -378,7 +380,7 @@ def main(cwd=None):
             if not run_for:
                 print('Press Ctrl-C to exit')
                 q_run_for = None
-            res = t.get_retweeters_new(q_retweeters_new, q_run_for)
+            res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_retweeters_new, epoch_time))
             elif json:
