@@ -109,6 +109,7 @@ class Twitter:
         stream.filter(track=q.split(' '))
 
     def watch_users(self, user_ids, run_for):
+        '''saves all the tweets and its retweets for a list of users'''
         self.type = 'watch_users'
         self.current_url = '/statuses/user_timeline'
         user_ids = user_ids.split(' ')
