@@ -116,6 +116,12 @@ def main(cwd=None):
         help="Specify for how long should openglass run. Example 100s, 5h, 3d",
     )
     parser.add_argument(
+        "--watch-users",
+        metavar="users IDs separated with spaces",
+        default=None,
+        help="Get all the tweets and their retweets of each watched user",
+    )
+    parser.add_argument(
         "--telegram",
         action='store_true',
         help="Query telegram enpoints",
@@ -167,6 +173,8 @@ def main(cwd=None):
     q_retweeters = args.retweeters
     retweeters_new = bool(args.retweeters_new)
     q_retweeters_new = args.retweeters_new
+    watch_users = bool(args.watch_users)
+    q_watch_users = args.watch_users
     telegram = bool(args.telegram)
     channel_users = bool(args.channel_users)
     q_channel_users = args.channel_users
@@ -223,6 +231,8 @@ def main(cwd=None):
         if retweeters:
             num_actions += 1
         if retweeters_new:
+            num_actions += 1
+        if watch_users:
             num_actions += 1
 
     if telegram:
@@ -333,7 +343,7 @@ def main(cwd=None):
                     save_result()
                     sys.exit()
             try:
-                t.get_timeline_new(q_timeline_new, callback)
+                t.get_timeline_new(q_timeline_new.split(' '), callback)
             except KeyboardInterrupt:
                 save_result()
                 sys.exit()
@@ -376,6 +386,18 @@ def main(cwd=None):
             else:
                 print_to_stdout(res)
             sys.exit()
+        elif watch_users:
+            if not run_for:
+                print('Press Ctrl-C to exit')
+                q_run_for = None
+            res = t.watch_users(q_watch_users, q_run_for)
+            if csv:
+                save_as_csv(res, "{}-{}.csv".format(q_watch_users, epoch_time))
+            elif json:
+                save_as_json(res, "{}-{}.json".format(q_watch_users, epoch_time))
+            else:
+                print_to_stdout(res)
+            sys.exit()
 
     if telegram:
         if config_filename:
@@ -415,7 +437,9 @@ def save_as_csv(res_dict, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
     """
-
+    if len(res_dict) == 0:
+        print('No results')
+        return
     if not os.path.isfile(csvfile):
         csvfile = open(csvfile, 'w', newline='')
         fieldnames = res_dict[0].keys()
@@ -438,12 +462,18 @@ def save_as_json(res_dict, jsonfile):
     """
     Takes a list of dictionaries as input and outputs a JSON file.
     """
+    if len(res_dict) == 0:
+        print('No results')
+        return
     fh = open(jsonfile, 'w', newline='')
     fh.write(json.dumps(res_dict))
     fh.close()
 
 
 def print_to_stdout(res_dict):
+    if len(res_dict) == 0:
+        print('No results')
+        return
     print(json.dumps(res_dict, indent=4, sort_keys=True))
 
 

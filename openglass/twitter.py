@@ -40,7 +40,8 @@ class Twitter:
     def get_retweeters_new(self, tweet_id, run_for):
         '''returns the new retweeters from a given tweet'''
         self.current_url = '/statuses/retweeters/ids'
-        self.type = 'get_retweeters_new'
+        if self.type == '':
+            self.type = 'get_retweeters_new'
         start_time = time.time()
         retweeters_ids = []
         retweeters = []
@@ -56,7 +57,7 @@ class Twitter:
                         num_new_retweeters += 1
                         retweeters_ids.append(new_retweeter['retweeter_id'])
                         retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': new_retweeter['retweeter_id']}))
-                if num_new_retweeters > 0:
+                if self.type == 'get_retweeters_new' and num_new_retweeters > 0:
                     print('Number of results: {}'.format(len(retweeters_ids), end='\r'))
 
                 # update how much we wait until the next request
@@ -95,10 +96,11 @@ class Twitter:
     def get_timeline_new(self, users, callback):
         '''returns new tweets of a list of users'''
         self.current_url = '/statuses/user_timeline'
-        self.type = 'get_timeline_new'
+        if self.type == '':
+            self.type = 'get_timeline_new'
         stream_listener = StreamListener(callback, self.search_id, self.current_url, self.type)
         stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
-        stream.filter(follow=users.split(' '))
+        stream.filter(follow=users)
 
     def search(self, q):
         '''searches for already published tweets that match the search'''
@@ -113,6 +115,46 @@ class Twitter:
         stream_listener = StreamListener(callback, self.search_id, self.current_url, self.type)
         stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
         stream.filter(track=q.split(' '))
+
+    def watch_users(self, user_ids, run_for):
+        self.type = 'watch_users'
+        self.current_url = '/statuses/user_timeline'
+        user_ids = user_ids.split(' ')
+        start_time = time.time()
+        users_data = {}
+        for user_id in user_ids:
+            users_data[int(user_id)] = {}
+            users_data[int(user_id)]['tweets'] = {}
+
+        def callback(tweet):
+            tweet_id = tweet['id']
+            user_id = tweet['user']['id']
+            is_retweet = str(user_id) not in user_ids
+            if is_retweet:
+                # print('new retweet: of {}'.format(user_id))
+                user_id = tweet['retweeted_status']['user']['id']
+                tweet_id = tweet['retweeted_status']['id']
+
+                if tweet_id not in users_data[user_id]['tweets']:
+                    users_data[user_id]['tweets'][tweet_id] = {}
+                    users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
+
+                users_data[user_id]['tweets'][tweet_id]['retweeters'].append(tweet)
+            else:
+                # print('new tweet of {}'.format(user_id))
+                users_data[user_id]['tweets'][tweet_id] = {}
+                users_data[user_id]['tweets'][tweet_id]['info'] = tweet
+                users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
+
+            if run_for and time.time() - start_time > run_for:
+                raise KeyboardInterrupt
+
+        try:
+            self.get_timeline_new(user_ids, callback)
+        except KeyboardInterrupt:
+            pass
+
+        return users_data
 
     def __authenticate(self, credentials):
         '''authenticates to twitter with the given credentials'''
