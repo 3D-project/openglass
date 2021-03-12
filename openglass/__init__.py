@@ -442,22 +442,13 @@ def save_as_csv(res_dict, csvfile):
     if len(res_dict) == 0:
         print('No results')
         return
-    if not os.path.isfile(csvfile):
-        csvfile = open(csvfile, 'w', newline='')
+    with open(csvfile, 'w', newline='') as csvfile:
         fieldnames = res_dict[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
                                 extrasaction='ignore', delimiter=';')
         writer.writeheader()
-    else:
-        csvfile = open(csvfile, 'a', newline='')
-        fieldnames = res_dict[0].keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                extrasaction='ignore', delimiter=';')
-
-    for r in res_dict:
-        writer.writerow(r)
-
-    csvfile.close()
+        for r in res_dict:
+            writer.writerow(r)
 
 
 def save_as_json(res_dict, jsonfile):
