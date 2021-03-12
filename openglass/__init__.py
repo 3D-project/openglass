@@ -189,7 +189,7 @@ def main(cwd=None):
         print(
             "Openglass version {}".format(utility.version)
         )
-        sys.exit()
+        return
 
     if settings:
         if config_filename:
@@ -200,19 +200,19 @@ def main(cwd=None):
             print(
                 "Openglass settings {}".format(utility.print_settings())
             )
-        sys.exit()
+        return
 
     if json and csv:
         parser.print_help()
-        sys.exit()
+        return
 
     if not telegram and not twitter:
         parser.print_help()
-        sys.exit()
+        return
 
     if telegram and twitter:
         parser.print_help()
-        sys.exit()
+        return
 
     num_actions = 0
     if twitter:
@@ -243,16 +243,16 @@ def main(cwd=None):
 
     if num_actions != 1:
         parser.print_help()
-        sys.exit()
+        return
 
     if (run_for and telegram) or (run_for and (search or timeline or profile or followers or retweeters)):
         parser.print_help()
-        sys.exit()
+        return
 
     if run_for:
         if re.search(r'\d+[smhd]', q_run_for) is None:
             parser.print_help()
-            sys.exit()
+            return
         amount = q_run_for[:-1]
         span = q_run_for[-1]
         if span == 's':
@@ -285,7 +285,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_search, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         if search_new:
             if not run_for:
                 print('Press Ctrl-C to exit')
@@ -306,13 +306,13 @@ def main(cwd=None):
                 print('Number of results: {}'.format(len(res)), end='\r')
                 if run_for and time.time() - epoch_time > q_run_for:
                     save_result()
-                    sys.exit()
+                    return
             print('Number of results: 0', end='\r')
             try:
                 t.search_new(q_search_new, callback)
             except KeyboardInterrupt:
                 save_result()
-                sys.exit()
+                return
         elif timeline:
             res = t.get_timeline(q_timeline)
             if csv:
@@ -321,7 +321,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_timeline, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         elif timeline_new:
             if not run_for:
                 print('Press Ctrl-C to exit')
@@ -342,13 +342,13 @@ def main(cwd=None):
                 print('Number of results: {}'.format(len(res)), end='\r')
                 if run_for and time.time() - epoch_time > q_run_for:
                     save_result()
-                    sys.exit()
+                    return
             print('Number of results: 0', end='\r')
             try:
                 t.get_timeline_new(q_timeline_new.split(' '), callback)
             except KeyboardInterrupt:
                 save_result()
-                sys.exit()
+                return
         elif profile:
             res = t.get_profile(q_profile)
             if csv:
@@ -357,7 +357,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_profile, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         elif followers:
             res = t.get_followers(q_followers)
             if csv:
@@ -366,7 +366,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_followers, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         elif retweeters:
             res = t.get_retweeters(q_retweeters)
             if csv:
@@ -375,7 +375,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_retweeters, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         elif retweeters_new:
             if not run_for:
                 print('Press Ctrl-C to exit')
@@ -387,7 +387,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_retweeters_new, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         elif watch_users:
             if not run_for:
                 print('Press Ctrl-C to exit')
@@ -399,7 +399,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_watch_users, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
 
     if telegram:
         if config_filename:
@@ -417,7 +417,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_channel_users, epoch_time))
             else:
                 print_to_stdout(res)
-            sys.exit()
+            return
         elif channel_messages:
             res = t.get_messages(q_channel_messages)
             if search:
@@ -432,7 +432,7 @@ def main(cwd=None):
                 save_as_json(res, "{}-{}.json".format(q_channel_messages, epoch_time))
             else:
                 print(json.dumps(res, indent=4, sort_keys=True, cls=DateTimeEncoder))
-            sys.exit()
+            return
 
 
 def save_as_csv(res_dict, csvfile):
