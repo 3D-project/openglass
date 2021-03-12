@@ -117,7 +117,7 @@ def main(cwd=None):
     )
     parser.add_argument(
         "--watch-users",
-        metavar="users IDs separated with spaces",
+        metavar="users NAMEs or IDs separated with spaces",
         default=None,
         help="Get all the tweets and their retweets of each watched user",
     )
@@ -467,6 +467,7 @@ def print_to_stdout(res_dict):
     if len(res_dict) == 0:
         print('No results')
         return
+    print('')
     print(json.dumps(res_dict, indent=4, sort_keys=True))
 
 

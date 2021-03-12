@@ -1,3 +1,4 @@
+import re
 import json
 import time
 import tweepy
@@ -108,36 +109,67 @@ class Twitter:
         stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
         stream.filter(track=q.split(' '))
 
+    def __name_to_id(self, id_name_list):
+        id_list = []
+        for id_name in id_name_list:
+            if re.search(r'^\d+$', id_name):
+                id_list.append(id_name)
+            else:
+                profile = self.get_profile(id_name)
+                id_list.append(str(profile['id']))
+        return id_list
+
     def watch_users(self, user_ids, run_for):
         '''saves all the tweets and its retweets for a list of users'''
         self.type = 'watch_users'
         self.current_url = '/statuses/user_timeline'
-        user_ids = user_ids.split(' ')
+        user_ids = self.__name_to_id(user_ids.split(' '))
         start_time = time.time()
         users_data = {}
         for user_id in user_ids:
             users_data[int(user_id)] = {}
             users_data[int(user_id)]['tweets'] = {}
+        print('Number of results: 0', end='\r')
+
+        def num_results(data):
+            num = 0
+            for elem in data:
+                for t in data[elem]['tweets']:
+                    if 'new_tweet' in data[elem]['tweets'][t]:
+                        num += 1
+                    num += len(data[elem]['tweets'][t]['retweeters'])
+            return num
 
         def callback(tweet):
             tweet_id = tweet['id']
             user_id = tweet['user']['id']
-            is_retweet = str(user_id) not in user_ids
-            if is_retweet:
-                # print('new retweet: of {}'.format(user_id))
+            is_own_tweet = str(user_id) in user_ids
+            is_retweet = 'retweeted_status' in tweet
+            if not is_own_tweet and is_retweet:
                 user_id = tweet['retweeted_status']['user']['id']
                 tweet_id = tweet['retweeted_status']['id']
 
                 if tweet_id not in users_data[user_id]['tweets']:
                     users_data[user_id]['tweets'][tweet_id] = {}
+                    try:
+                        old_tweet = self.api.statuses_lookup([tweet_id])
+                    except Exception:
+                        old_tweet = []
+                    if len(old_tweet) == 1:
+                        users_data[user_id]['tweets'][tweet_id]['old_tweet'] = old_tweet[0]._json
                     users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
 
                 users_data[user_id]['tweets'][tweet_id]['retweeters'].append(tweet)
-            else:
-                # print('new tweet of {}'.format(user_id))
+                num = num_results(users_data)
+                print('Number of results: {}'.format(num), end='\r')
+            elif is_own_tweet:
                 users_data[user_id]['tweets'][tweet_id] = {}
-                users_data[user_id]['tweets'][tweet_id]['info'] = tweet
+                users_data[user_id]['tweets'][tweet_id]['new_tweet'] = tweet
                 users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
+                num = num_results(users_data)
+                print('Number of results: {}'.format(num), end='\r')
+            else:
+                pass  # somebody responded a tweet
 
             if run_for and time.time() - start_time > run_for:
                 raise KeyboardInterrupt
