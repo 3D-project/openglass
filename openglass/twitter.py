@@ -253,7 +253,7 @@ class Twitter:
         return collected_data
 
     def __authenticate(self, credentials):
-        '''__authenticates to twitter with the given credentials'''
+        '''authenticates to twitter with the given credentials'''
         auth = tweepy.OAuthHandler(credentials['CONSUMER_KEY'], credentials['CONSUMER_SECRET'])
         auth.set_access_token(credentials['ACCESS_KEY'], credentials['ACCESS_SECRET'])
         api = tweepy.API(auth)
