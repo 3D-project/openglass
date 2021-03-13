@@ -245,7 +245,7 @@ def main(cwd=None):
         parser.print_help()
         return
 
-    if (run_for and telegram) or (run_for and (search or timeline or profile or followers or retweeters)):
+    if run_for and telegram:
         parser.print_help()
         return
 
@@ -263,6 +263,8 @@ def main(cwd=None):
             q_run_for = int(amount) * 60 * 60
         if span == 'd':
             q_run_for = int(amount) * 24 * 60 * 60
+    else:
+        q_run_for = None
 
     # Re-load settings, if a custom config was passed in
     if config_filename:
@@ -279,7 +281,7 @@ def main(cwd=None):
         t = Twitter(utility.get_setting('twitter_apis'))
         if search:
             print('Press Ctrl-C to exit')
-            res = t.search(q_search)
+            res = t.search(q_search, q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_search, epoch_time))
             elif jsonl:
@@ -315,7 +317,7 @@ def main(cwd=None):
                 return
         elif timeline:
             print('Press Ctrl-C to exit')
-            res = t.get_timeline(q_timeline)
+            res = t.get_timeline(q_timeline, q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_timeline, epoch_time))
             elif jsonl:
@@ -360,7 +362,7 @@ def main(cwd=None):
             return
         elif followers:
             print('Press Ctrl-C to exit')
-            res = t.get_followers(q_followers)
+            res = t.get_followers(q_followers, q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_followers, epoch_time))
             elif jsonl:
@@ -370,7 +372,7 @@ def main(cwd=None):
             return
         elif retweeters:
             print('Press Ctrl-C to exit')
-            res = t.get_retweeters(q_retweeters)
+            res = t.get_retweeters(q_retweeters, q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_retweeters, epoch_time))
             elif jsonl:

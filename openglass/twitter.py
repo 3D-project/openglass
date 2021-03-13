@@ -37,18 +37,21 @@ class Twitter:
         self.search_id = str(uuid.uuid4())
         self.type = ''
 
-    def get_retweeters(self, tweet_id):
+    def get_retweeters(self, tweet_id, run_for):
         '''returns up to 100 user IDs that have retweeted the tweet'''
         self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters'
         retweeters = []
+        start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
             cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id)
             for retweeter in self.__limit_handled(cursor.items()):
                 retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
                 print('Number of results: {}'.format(len(retweeters)), end='\r')
+                if run_for and time.time() - start_time > run_for:
+                    break
         except KeyboardInterrupt:
             pass
         return retweeters
@@ -83,17 +86,20 @@ class Twitter:
 
         return retweeters
 
-    def get_followers(self, user):
+    def get_followers(self, user, run_for):
         '''returns the followers of a user, ordered from new to old'''
         self.current_url = '/followers/list'
         self.type = 'get_followers'
         followers = []
+        start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
             cursor = tweepy.Cursor(self.api.followers, id=user)
             for follower in self.__limit_handled(cursor.items()):
                 followers.append(standarize_entry(self, follower._json))
                 print('Number of results: {}'.format(len(followers)), end='\r')
+                if run_for and time.time() - start_time > run_for:
+                    break
         except KeyboardInterrupt:
             pass
         return followers
@@ -104,17 +110,20 @@ class Twitter:
         self.type = 'get_profile'
         return standarize_entry(self, self.api.get_user(id=user)._json)
 
-    def get_timeline(self, user):
+    def get_timeline(self, user, run_for):
         '''returns up to 3.200 of a user's most recent tweets'''
         self.current_url = '/statuses/user_timeline'
         self.type = 'get_timeline'
         tweets = []
+        start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
             cursor = tweepy.Cursor(self.api.user_timeline, id=user)
             for tweet in self.__limit_handled(cursor.items()):
                 tweets.append(standarize_entry(self, tweet._json))
                 print('Number of results: {}'.format(len(tweets)), end='\r')
+                if run_for and time.time() - start_time > run_for:
+                    break
         except KeyboardInterrupt:
             pass
         return tweets
@@ -128,17 +137,20 @@ class Twitter:
         stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
         stream.filter(follow=users)
 
-    def search(self, q):
+    def search(self, q, run_for):
         '''searches for already published tweets that match the search'''
         self.current_url = '/search/tweets'
         self.type = 'search'
         tweets = []
+        start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
             cursor = tweepy.Cursor(self.api.search, q=q)
             for tweet in self.__limit_handled(cursor.items()):
                 tweets.append(standarize_entry(self, tweet._json))
                 print('Number of results: {}'.format(len(tweets)), end='\r')
+                if run_for and time.time() - start_time > run_for:
+                    break
         except KeyboardInterrupt:
             pass
         return tweets
