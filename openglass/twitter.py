@@ -1,30 +1,37 @@
 import re
 import json
 import time
-import tweepy
 import uuid
+import random
+import tweepy
 
 
 class StreamListener(tweepy.StreamListener):
     def __init__(self, twitter, callback):
         self.twitter = twitter
         self.callback = callback
-        self.search_id = twitter_obj.search_id
-        self.current_url = twitter_obj.current_url
-        self.type = twitter_obj.type
+        self.search_id = twitter.search_id
+        self.current_url = twitter.current_url
+        self.type = twitter.type
         self.last_rotation = time.time()
         super().__init__()
 
     def on_status(self, status):
         self.callback(standarize_entry(self, status._json))
-        if time.time() - self.last_rotation > 15 * 60:
-            pass
+        MINS_15 = 15 * 60
+        if time.time() - self.last_rotation > MINS_15:
+            self.rotate_apikey()
+            self.last_rotation = time.time()
 
     def on_error(self, status_code):
         return True  # keep stream alive
 
     def on_timeout(self):
         return False  # restart streaming
+
+    def rotate_apikey(self):
+        self.twitter.rotate_apikey()
+        self.auth = self.twitter.api.auth
 
 
 class Twitter:
@@ -35,7 +42,7 @@ class Twitter:
             exit('Provide at least one Twitter API key')
         for twitter_api in self.twitter_apis:
             twitter_api['expired_at'] = {}
-        self.api_in_use = self.twitter_apis[0]
+        self.api_in_use = random.choice(self.twitter_apis)
         self.api = self.__authenticate(self.api_in_use)
         self.current_url = ''
         self.search_id = str(uuid.uuid4())
@@ -246,11 +253,21 @@ class Twitter:
         return collected_data
 
     def __authenticate(self, credentials):
-        '''authenticates to twitter with the given credentials'''
+        '''__authenticates to twitter with the given credentials'''
         auth = tweepy.OAuthHandler(credentials['CONSUMER_KEY'], credentials['CONSUMER_SECRET'])
         auth.set_access_token(credentials['ACCESS_KEY'], credentials['ACCESS_SECRET'])
         api = tweepy.API(auth)
         return api
+
+    def rotate_apikey(self):
+        '''rotates the api key being used'''
+        index = -1
+        for i, twitter_api in enumerate(self.twitter_apis):
+            if twitter_api == self.api_in_use:
+                index = i
+                break
+        self.api_in_use = self.twitter_apis[(index + 1) % len(self.twitter_apis)]
+        self.api = self.__authenticate(self.api_in_use)
 
     def __limit_handled(self, cursor):
         '''used by the cursors, handles rate limit'''
