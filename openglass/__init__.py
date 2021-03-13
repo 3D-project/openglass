@@ -460,7 +460,7 @@ def save_as_json(res_dict, jsonfile):
     if len(res_dict) == 0:
         print('No results')
         return
-    fh = open(jsonfile, 'w', newline='')
+    fh = open(jsonfile, 'w')
     fh.write(json.dumps(res_dict))
     fh.close()
 
