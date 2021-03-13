@@ -16,6 +16,12 @@ class StreamListener(tweepy.StreamListener):
     def on_status(self, status):
         self.callback(standarize_entry(self, status._json))
 
+    def on_error(self, status_code):
+        return True  # keep stream alive
+
+    def on_timeout(self):
+        return False  # restart streaming
+
 
 class Twitter:
 
