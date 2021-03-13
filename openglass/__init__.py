@@ -368,6 +368,10 @@ def main(cwd=None):
 
 def store_result(data, csv, jsonl, filename, start_time):
     '''save the result in as a .csv, .jsonl or print as json'''
+    print('')
+    if len(data) == 0:
+        print('No results')
+        return
     if csv:
         filename = "{}-{}.csv".format(filename, start_time)
         save_as_csv(data, filename)
@@ -377,16 +381,13 @@ def store_result(data, csv, jsonl, filename, start_time):
         save_as_jsonl(data, filename)
         print('[+] created {}'.format(filename))
     else:
-        print_to_stdout(data)
+        print(json.dumps(data, indent=4, sort_keys=True))
 
 
 def save_as_csv(res_dict, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
     """
-    if len(res_dict) == 0:
-        print('No results')
-        return
     with open(csvfile, 'w', newline='') as csvfile:
         fieldnames = res_dict[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
@@ -400,19 +401,8 @@ def save_as_jsonl(res_dict, jsonfile):
     """
     Takes a list of dictionaries as input and outputs a JSON file.
     """
-    if len(res_dict) == 0:
-        print('No results')
-        return
     with open(jsonfile, 'w') as fh:
         fh.write('\n'.join([json.dumps(line) for line in res_dict]))
-
-
-def print_to_stdout(res_dict):
-    if len(res_dict) == 0:
-        print('No results')
-        return
-    print('')
-    print(json.dumps(res_dict, indent=4, sort_keys=True))
 
 
 def search_dict(res_dict, query_value):
