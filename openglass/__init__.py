@@ -52,9 +52,9 @@ def main(cwd=None):
         help="Stores results as csv",
     )
     parser.add_argument(
-        "--json",
+        "--jsonl",
         action='store_true',
-        help="Stores results as json",
+        help="Stores results as jsonl",
     )
     parser.add_argument(
         "--twitter",
@@ -154,7 +154,7 @@ def main(cwd=None):
     version = bool(args.version)
     settings = bool(args.settings)
     csv = bool(args.csv)
-    json = bool(args.json)
+    jsonl = bool(args.jsonl)
     domains = bool(args.domains)
     twitter = bool(args.twitter)
     timeline = bool(args.timeline)
@@ -202,7 +202,7 @@ def main(cwd=None):
             )
         return
 
-    if json and csv:
+    if jsonl and csv:
         parser.print_help()
         return
 
@@ -282,22 +282,22 @@ def main(cwd=None):
             res = t.search(q_search)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_search, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_search, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_search, epoch_time))
             else:
                 print_to_stdout(res)
             return
         if search_new:
             print('Press Ctrl-C to exit')
             csv_name = "{}-{}.csv".format(q_search_new.replace(' ', '_'), epoch_time)
-            json_name = "{}-{}.json".format(q_search_new.replace(' ', '_'), epoch_time)
+            json_name = "{}-{}.jsonl".format(q_search_new.replace(' ', '_'), epoch_time)
             res = []
 
             def save_result():
                 if csv:
                     save_as_csv(res, csv_name)
-                elif json:
-                    save_as_json(res, json_name)
+                elif jsonl:
+                    save_as_jsonl(res, json_name)
                 else:
                     print_to_stdout(res)
 
@@ -318,22 +318,22 @@ def main(cwd=None):
             res = t.get_timeline(q_timeline)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_timeline, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_timeline, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_timeline, epoch_time))
             else:
                 print_to_stdout(res)
             return
         elif timeline_new:
             print('Press Ctrl-C to exit')
             csv_name = "{}-{}.csv".format(q_timeline_new.replace(' ', '_'), epoch_time)
-            json_name = "{}-{}.json".format(q_timeline_new.replace(' ', '_'), epoch_time)
+            json_name = "{}-{}.jsonl".format(q_timeline_new.replace(' ', '_'), epoch_time)
             res = []
 
             def save_result():
                 if csv:
                     save_as_csv(res, csv_name)
-                elif json:
-                    save_as_json(res, json_name)
+                elif jsonl:
+                    save_as_jsonl(res, json_name)
                 else:
                     print_to_stdout(res)
 
@@ -353,8 +353,8 @@ def main(cwd=None):
             res = t.get_profile(q_profile)
             if csv:
                 save_as_csv([res], "{}-{}.csv".format(q_profile, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_profile, epoch_time))
+            elif jsonl:
+                save_as_jsonl([res], "{}-{}.jsonl".format(q_profile, epoch_time))
             else:
                 print_to_stdout(res)
             return
@@ -363,8 +363,8 @@ def main(cwd=None):
             res = t.get_followers(q_followers)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_followers, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_followers, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_followers, epoch_time))
             else:
                 print_to_stdout(res)
             return
@@ -373,8 +373,8 @@ def main(cwd=None):
             res = t.get_retweeters(q_retweeters)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_retweeters, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_retweeters, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_retweeters, epoch_time))
             else:
                 print_to_stdout(res)
             return
@@ -385,8 +385,8 @@ def main(cwd=None):
             res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_retweeters_new, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_retweeters_new, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_retweeters_new, epoch_time))
             else:
                 print_to_stdout(res)
             return
@@ -397,8 +397,8 @@ def main(cwd=None):
             res = t.watch_users(q_watch_users, q_run_for)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_watch_users, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_watch_users, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_watch_users, epoch_time))
             else:
                 print_to_stdout(res)
             return
@@ -415,8 +415,8 @@ def main(cwd=None):
             res = t.get_channel(q_channel_users)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_channel_users, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_channel_users, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_channel_users, epoch_time))
             else:
                 print_to_stdout(res)
             return
@@ -430,8 +430,8 @@ def main(cwd=None):
                 res = t.parse_channel_links(res)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_channel_messages, epoch_time))
-            elif json:
-                save_as_json(res, "{}-{}.json".format(q_channel_messages, epoch_time))
+            elif jsonl:
+                save_as_jsonl(res, "{}-{}.jsonl".format(q_channel_messages, epoch_time))
             else:
                 print(json.dumps(res, indent=4, sort_keys=True, cls=DateTimeEncoder))
             return
@@ -453,16 +453,15 @@ def save_as_csv(res_dict, csvfile):
             writer.writerow(r)
 
 
-def save_as_json(res_dict, jsonfile):
+def save_as_jsonl(res_dict, jsonfile):
     """
     Takes a list of dictionaries as input and outputs a JSON file.
     """
     if len(res_dict) == 0:
         print('No results')
         return
-    fh = open(jsonfile, 'w')
-    fh.write(json.dumps(res_dict))
-    fh.close()
+    with open(jsonfile, 'w') as fh:
+        fh.writelines([json.dumps(line) for line in res_dict])
 
 
 def print_to_stdout(res_dict):

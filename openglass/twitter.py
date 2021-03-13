@@ -47,7 +47,7 @@ class Twitter:
         try:
             cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id)
             for retweeter in self.__limit_handled(cursor.items()):
-                retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}))
+                retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
                 print('Number of results: {}'.format(len(retweeters)), end='\r')
         except KeyboardInterrupt:
             pass
@@ -167,19 +167,18 @@ class Twitter:
         self.current_url = '/statuses/user_timeline'
         user_ids = self.__name_to_id(user_ids.split(' '))
         start_time = time.time()
-        users_data = {}
-        for user_id in user_ids:
-            users_data[int(user_id)] = {}
-            users_data[int(user_id)]['tweets'] = {}
+        collected_data = []
         print('Number of results: 0', end='\r')
+        tweets_by_user = {}
+        for user_id in user_ids:
+            tweets_by_user[int(user_id)] = []
 
         def num_results(data):
             num = 0
             for elem in data:
-                for t in data[elem]['tweets']:
-                    if 'new_tweet' in data[elem]['tweets'][t]:
-                        num += 1
-                    num += len(data[elem]['tweets'][t]['retweeters'])
+                if 'new_tweet' in elem:
+                    num += 1
+                num += len(elem['retweets'])
             return num
 
         def callback(tweet):
@@ -187,27 +186,36 @@ class Twitter:
             user_id = tweet['user']['id']
             is_own_tweet = str(user_id) in user_ids
             is_retweet = 'retweeted_status' in tweet
+            if is_retweet and tweet['retweeted_status']['user']['id_str'] not in user_ids:
+                return  # the user was probably tagged
             if not is_own_tweet and is_retweet:
                 user_id = tweet['retweeted_status']['user']['id']
                 tweet_id = tweet['retweeted_status']['id']
-
-                if tweet_id not in users_data[user_id]['tweets']:
-                    users_data[user_id]['tweets'][tweet_id] = {}
+                if tweet_id not in tweets_by_user[user_id]:
+                    entry = {}
+                    entry['user_id'] = user_id
+                    entry['tweet_id'] = tweet_id
+                    entry['retweets'] = [tweet]
                     try:
                         old_tweet = self.api.statuses_lookup([tweet_id])
                     except Exception:
                         old_tweet = []
                     if len(old_tweet) == 1:
-                        users_data[user_id]['tweets'][tweet_id]['old_tweet'] = old_tweet[0]._json
-                    users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
-
-                users_data[user_id]['tweets'][tweet_id]['retweeters'].append(tweet)
-                print('Number of results: {}'.format(num_results(users_data)), end='\r')
+                        entry['old_tweet'] = old_tweet[0]._json
+                    tweets_by_user[user_id].append(tweet_id)
+                    collected_data.append(entry)
+                else:
+                    entry = [entry for entry in collected_data if entry['user_id'] == user_id and entry['tweet_id'] == tweet_id][0]
+                    entry['retweets'].append(tweet)
+                print('Number of results: {}'.format(num_results(collected_data)), end='\r')
             elif is_own_tweet:
-                users_data[user_id]['tweets'][tweet_id] = {}
-                users_data[user_id]['tweets'][tweet_id]['new_tweet'] = tweet
-                users_data[user_id]['tweets'][tweet_id]['retweeters'] = []
-                print('Number of results: {}'.format(num_results(users_data)), end='\r')
+                entry = {}
+                entry['user_id'] = user_id
+                entry['tweet_id'] = tweet_id
+                entry['new_tweet'] = tweet
+                entry['retweets'] = []
+                tweets_by_user[user_id].append(tweet_id)
+                print('Number of results: {}'.format(num_results(collected_data)), end='\r')
             else:
                 pass  # somebody responded a tweet
 
@@ -219,7 +227,7 @@ class Twitter:
         except KeyboardInterrupt:
             pass
 
-        return users_data
+        return collected_data
 
     def __authenticate(self, credentials):
         '''authenticates to twitter with the given credentials'''
