@@ -42,7 +42,16 @@ class Twitter:
         self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters'
-        return [standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}) for retweeter in self.__limit_handled(tweepy.Cursor(self.api.retweeters, id=tweet_id).items())]
+        retweeters = []
+        print('Number of results: 0', end='\r')
+        try:
+            cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id)
+            for retweeter in self.__limit_handled(cursor.items()):
+                retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': retweeter}))
+                print('Number of results: {}'.format(len(retweeters)), end='\r')
+        except KeyboardInterrupt:
+            pass
+        return retweeters
 
     def get_retweeters_new(self, tweet_ids, run_for):
         '''returns the new retweeters from a given tweet'''
@@ -81,7 +90,8 @@ class Twitter:
         followers = []
         print('Number of results: 0', end='\r')
         try:
-            for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items()):
+            cursor = tweepy.Cursor(self.api.followers, id=user)
+            for follower in self.__limit_handled(cursor.items()):
                 followers.append(standarize_entry(self, follower._json))
                 print('Number of results: {}'.format(len(followers)), end='\r')
         except KeyboardInterrupt:
@@ -98,7 +108,16 @@ class Twitter:
         '''returns up to 3.200 of a user's most recent tweets'''
         self.current_url = '/statuses/user_timeline'
         self.type = 'get_timeline'
-        return [standarize_entry(self, tweet._json) for tweet in self.__limit_handled(tweepy.Cursor(self.api.user_timeline, id=user).items())]
+        tweets = []
+        print('Number of results: 0', end='\r')
+        try:
+            cursor = tweepy.Cursor(self.api.user_timeline, id=user)
+            for tweet in self.__limit_handled(cursor.items()):
+                tweets.append(standarize_entry(self, tweet._json))
+                print('Number of results: {}'.format(len(tweets)), end='\r')
+        except KeyboardInterrupt:
+            pass
+        return tweets
 
     def get_timeline_new(self, users, callback):
         '''returns new tweets of a list of users'''
@@ -113,7 +132,16 @@ class Twitter:
         '''searches for already published tweets that match the search'''
         self.current_url = '/search/tweets'
         self.type = 'search'
-        return [standarize_entry(self, tweet._json) for tweet in self.__limit_handled(tweepy.Cursor(self.api.search, q=q).items())]
+        tweets = []
+        print('Number of results: 0', end='\r')
+        try:
+            cursor = tweepy.Cursor(self.api.search, q=q)
+            for tweet in self.__limit_handled(cursor.items()):
+                tweets.append(standarize_entry(self, tweet._json))
+                print('Number of results: {}'.format(len(tweets)), end='\r')
+        except KeyboardInterrupt:
+            pass
+        return tweets
 
     def search_new(self, q, callback):
         '''returns new tweets that match the search'''

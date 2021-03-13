@@ -278,6 +278,7 @@ def main(cwd=None):
 
         t = Twitter(utility.get_setting('twitter_apis'))
         if search:
+            print('Press Ctrl-C to exit')
             res = t.search(q_search)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_search, epoch_time))
@@ -287,8 +288,7 @@ def main(cwd=None):
                 print_to_stdout(res)
             return
         if search_new:
-            if not run_for:
-                print('Press Ctrl-C to exit')
+            print('Press Ctrl-C to exit')
             csv_name = "{}-{}.csv".format(q_search_new.replace(' ', '_'), epoch_time)
             json_name = "{}-{}.json".format(q_search_new.replace(' ', '_'), epoch_time)
             res = []
@@ -314,6 +314,7 @@ def main(cwd=None):
                 save_result()
                 return
         elif timeline:
+            print('Press Ctrl-C to exit')
             res = t.get_timeline(q_timeline)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_timeline, epoch_time))
@@ -323,8 +324,7 @@ def main(cwd=None):
                 print_to_stdout(res)
             return
         elif timeline_new:
-            if not run_for:
-                print('Press Ctrl-C to exit')
+            print('Press Ctrl-C to exit')
             csv_name = "{}-{}.csv".format(q_timeline_new.replace(' ', '_'), epoch_time)
             json_name = "{}-{}.json".format(q_timeline_new.replace(' ', '_'), epoch_time)
             res = []
@@ -359,6 +359,7 @@ def main(cwd=None):
                 print_to_stdout(res)
             return
         elif followers:
+            print('Press Ctrl-C to exit')
             res = t.get_followers(q_followers)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_followers, epoch_time))
@@ -368,6 +369,7 @@ def main(cwd=None):
                 print_to_stdout(res)
             return
         elif retweeters:
+            print('Press Ctrl-C to exit')
             res = t.get_retweeters(q_retweeters)
             if csv:
                 save_as_csv(res, "{}-{}.csv".format(q_retweeters, epoch_time))
@@ -377,8 +379,8 @@ def main(cwd=None):
                 print_to_stdout(res)
             return
         elif retweeters_new:
+            print('Press Ctrl-C to exit')
             if not run_for:
-                print('Press Ctrl-C to exit')
                 q_run_for = None
             res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
             if csv:
@@ -389,8 +391,8 @@ def main(cwd=None):
                 print_to_stdout(res)
             return
         elif watch_users:
+            print('Press Ctrl-C to exit')
             if not run_for:
-                print('Press Ctrl-C to exit')
                 q_run_for = None
             res = t.watch_users(q_watch_users, q_run_for)
             if csv:
