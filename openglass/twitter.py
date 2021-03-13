@@ -13,21 +13,18 @@ class StreamListener(tweepy.StreamListener):
         self.search_id = twitter.search_id
         self.current_url = twitter.current_url
         self.type = twitter.type
-        self.last_rotation = time.time()
         super().__init__()
 
     def on_status(self, status):
         self.callback(standarize_entry(self, status._json))
-        MINS_15 = 15 * 60
-        if time.time() - self.last_rotation > MINS_15:
-            self.rotate_apikey()
-            self.last_rotation = time.time()
 
     def on_error(self, status_code):
-        return True  # keep stream alive
+        self.rotate_apikey()
+        return True
 
     def on_timeout(self):
-        return False  # restart streaming
+        self.rotate_apikey()
+        return True
 
     def rotate_apikey(self):
         self.twitter.rotate_apikey()
