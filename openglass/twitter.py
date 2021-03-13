@@ -6,15 +6,19 @@ import uuid
 
 
 class StreamListener(tweepy.StreamListener):
-    def __init__(self, callback, search_id, current_url, type_param):
+    def __init__(self, twitter, callback):
+        self.twitter = twitter
         self.callback = callback
-        self.search_id = search_id
-        self.current_url = current_url
-        self.type = type_param
+        self.search_id = twitter_obj.search_id
+        self.current_url = twitter_obj.current_url
+        self.type = twitter_obj.type
+        self.last_rotation = time.time()
         super().__init__()
 
     def on_status(self, status):
         self.callback(standarize_entry(self, status._json))
+        if time.time() - self.last_rotation > 15 * 60:
+            pass
 
     def on_error(self, status_code):
         return True  # keep stream alive
@@ -133,7 +137,7 @@ class Twitter:
         self.current_url = '/statuses/user_timeline'
         if self.type == '':
             self.type = 'get_timeline_new'
-        stream_listener = StreamListener(callback, self.search_id, self.current_url, self.type)
+        stream_listener = StreamListener(self, callback)
         stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
         stream.filter(follow=users)
 
@@ -159,7 +163,7 @@ class Twitter:
         '''returns new tweets that match the search'''
         self.current_url = '/search/tweets'
         self.type = 'search_new'
-        stream_listener = StreamListener(callback, self.search_id, self.current_url, self.type)
+        stream_listener = StreamListener(self, callback)
         stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
         stream.filter(track=q.split(' '))
 
