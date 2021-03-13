@@ -17,7 +17,7 @@ def main(cwd=None):
     openglass uses.
     """
 
-    epoch_time = int(time.time())
+    start_time = int(time.time())
 
     utility = Utility()
 
@@ -282,128 +282,65 @@ def main(cwd=None):
         if search:
             print('Press Ctrl-C to exit')
             res = t.search(q_search, q_run_for)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_search, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_search, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_search.replace(' ', '_')
         if search_new:
             print('Press Ctrl-C to exit')
-            csv_name = "{}-{}.csv".format(q_search_new.replace(' ', '_'), epoch_time)
-            json_name = "{}-{}.jsonl".format(q_search_new.replace(' ', '_'), epoch_time)
+            filename = q_search_new.replace(' ', '_')
             res = []
-
-            def save_result():
-                if csv:
-                    save_as_csv(res, csv_name)
-                elif jsonl:
-                    save_as_jsonl(res, json_name)
-                else:
-                    print_to_stdout(res)
 
             def callback(entry):
                 res.append(entry)
                 print('Number of results: {}'.format(len(res)), end='\r')
-                if run_for and time.time() - epoch_time > q_run_for:
-                    save_result()
-                    return
+                if run_for and time.time() - start_time > q_run_for:
+                    raise KeyboardInterrupt
+
             print('Number of results: 0', end='\r')
             try:
                 t.search_new(q_search_new, callback)
             except KeyboardInterrupt:
-                save_result()
-                return
+                pass
         elif timeline:
             print('Press Ctrl-C to exit')
             res = t.get_timeline(q_timeline, q_run_for)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_timeline, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_timeline, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_timeline.replace(' ', '_')
         elif timeline_new:
             print('Press Ctrl-C to exit')
-            csv_name = "{}-{}.csv".format(q_timeline_new.replace(' ', '_'), epoch_time)
-            json_name = "{}-{}.jsonl".format(q_timeline_new.replace(' ', '_'), epoch_time)
+            filename = q_timeline_new.replace(' ', '_')
             res = []
-
-            def save_result():
-                if csv:
-                    save_as_csv(res, csv_name)
-                elif jsonl:
-                    save_as_jsonl(res, json_name)
-                else:
-                    print_to_stdout(res)
 
             def callback(entry):
                 res.append(entry)
                 print('Number of results: {}'.format(len(res)), end='\r')
-                if run_for and time.time() - epoch_time > q_run_for:
-                    save_result()
-                    return
+                if run_for and time.time() - start_time > q_run_for:
+                    raise KeyboardInterrupt
             print('Number of results: 0', end='\r')
             try:
                 t.get_timeline_new(q_timeline_new.split(' '), callback)
             except KeyboardInterrupt:
-                save_result()
-                return
+                pass
         elif profile:
             res = t.get_profile(q_profile)
-            if csv:
-                save_as_csv([res], "{}-{}.csv".format(q_profile, epoch_time))
-            elif jsonl:
-                save_as_jsonl([res], "{}-{}.jsonl".format(q_profile, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_profile.replace(' ', '_')
         elif followers:
             print('Press Ctrl-C to exit')
             res = t.get_followers(q_followers, q_run_for)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_followers, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_followers, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_followers.replace(' ', '_')
         elif retweeters:
             print('Press Ctrl-C to exit')
             res = t.get_retweeters(q_retweeters, q_run_for)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_retweeters, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_retweeters, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_retweeters.replace(' ', '_')
         elif retweeters_new:
             print('Press Ctrl-C to exit')
             if not run_for:
                 q_run_for = None
             res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_retweeters_new, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_retweeters_new, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_retweeters_new.replace(' ', '_')
         elif watch_users:
             print('Press Ctrl-C to exit')
             if not run_for:
                 q_run_for = None
             res = t.watch_users(q_watch_users, q_run_for)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_watch_users, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_watch_users, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_watch_users.replace(' ', '_')
 
     if telegram:
         if config_filename:
@@ -415,13 +352,7 @@ def main(cwd=None):
 
         if channel_users:
             res = t.get_channel(q_channel_users)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_channel_users, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_channel_users, epoch_time))
-            else:
-                print_to_stdout(res)
-            return
+            filename = q_channel_users.replace(' ', '_')
         elif channel_messages:
             res = t.get_messages(q_channel_messages)
             if search:
@@ -430,13 +361,23 @@ def main(cwd=None):
                 res = t.parse_domains(res)
             if channel_links:
                 res = t.parse_channel_links(res)
-            if csv:
-                save_as_csv(res, "{}-{}.csv".format(q_channel_messages, epoch_time))
-            elif jsonl:
-                save_as_jsonl(res, "{}-{}.jsonl".format(q_channel_messages, epoch_time))
-            else:
-                print(json.dumps(res, indent=4, sort_keys=True, cls=DateTimeEncoder))
-            return
+            filename = q_channel_messages.replace(' ', '_')
+
+    store_result(res, csv, jsonl, filename, start_time)
+
+
+def store_result(data, csv, jsonl, filename, start_time):
+    '''save the result in as a .csv, .jsonl or print as json'''
+    if csv:
+        filename = "{}-{}.csv".format(filename, start_time)
+        save_as_csv(data, filename)
+        print('[+] created {}'.format(filename))
+    elif jsonl:
+        filename = "{}-{}.jsonl".format(filename, start_time)
+        save_as_jsonl(data, filename)
+        print('[+] created {}'.format(filename))
+    else:
+        print_to_stdout(data)
 
 
 def save_as_csv(res_dict, csvfile):
@@ -463,7 +404,7 @@ def save_as_jsonl(res_dict, jsonfile):
         print('No results')
         return
     with open(jsonfile, 'w') as fh:
-        fh.writelines([json.dumps(line) for line in res_dict])
+        fh.write('\n'.join([json.dumps(line) for line in res_dict]))
 
 
 def print_to_stdout(res_dict):
