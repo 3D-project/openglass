@@ -78,7 +78,15 @@ class Twitter:
         '''returns the followers of a user, ordered from new to old'''
         self.current_url = '/followers/list'
         self.type = 'get_followers'
-        return [standarize_entry(self, follower._json) for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items())]
+        followers = []
+        print('Number of results: 0', end='\r')
+        try:
+            for follower in self.__limit_handled(tweepy.Cursor(self.api.followers, id=user).items()):
+                followers.append(standarize_entry(self, follower._json))
+                print('Number of results: {}'.format(len(followers)), end='\r')
+        except KeyboardInterrupt:
+            pass
+        return followers
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
