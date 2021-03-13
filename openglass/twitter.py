@@ -6,6 +6,14 @@ import random
 import tweepy
 
 
+class RotateKeys(Exception):
+    '''
+    exception used for killing the stream and
+    creating it again with new credentials each 15 minutes
+    '''
+    pass
+
+
 class StreamListener(tweepy.StreamListener):
     def __init__(self, twitter, callback):
         self.twitter = twitter
@@ -13,10 +21,15 @@ class StreamListener(tweepy.StreamListener):
         self.search_id = twitter.search_id
         self.current_url = twitter.current_url
         self.type = twitter.type
+        self.last_rotation = time.time()
         super().__init__()
 
     def on_status(self, status):
         self.callback(standarize_entry(self, status._json))
+        MINS_15 = 15 * 60
+        if time.time() - self.last_rotation > MINS_15:
+            self.last_rotation = time.time()
+            self.rotate_apikey()
 
     def on_error(self, status_code):
         self.rotate_apikey()
@@ -27,8 +40,9 @@ class StreamListener(tweepy.StreamListener):
         return True
 
     def rotate_apikey(self):
-        self.twitter.rotate_apikey()
-        self.auth = self.twitter.api.auth
+        '''raise a RotateKeys exception if there is more than one key'''
+        if len(self.twitter.twitter_apis) > 1:
+            raise RotateKeys()
 
 
 class Twitter:
@@ -141,9 +155,15 @@ class Twitter:
         self.current_url = '/statuses/user_timeline'
         if self.type == '':
             self.type = 'get_timeline_new'
-        stream_listener = StreamListener(self, callback)
-        stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
-        stream.filter(follow=users)
+        while True:
+            try:
+                stream_listener = StreamListener(self, callback)
+                stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
+                stream.filter(follow=users)
+                break
+            except RotateKeys:
+                self.rotate_apikey()
+                continue
 
     def search(self, q, run_for):
         '''searches for already published tweets that match the search'''
@@ -167,9 +187,15 @@ class Twitter:
         '''returns new tweets that match the search'''
         self.current_url = '/search/tweets'
         self.type = 'search_new'
-        stream_listener = StreamListener(self, callback)
-        stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
-        stream.filter(track=q.split(' '))
+        while True:
+            try:
+                stream_listener = StreamListener(self, callback)
+                stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
+                stream.filter(track=q.split(' '))
+                break
+            except RotateKeys:
+                self.rotate_apikey()
+                continue
 
     def __name_to_id(self, id_name_list):
         id_list = []
