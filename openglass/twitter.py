@@ -284,13 +284,14 @@ class Twitter:
 
     def rotate_apikey(self):
         '''rotates the api key being used'''
-        index = -1
+        if len(self.twitter_apis) == 1:
+            return
         for i, twitter_api in enumerate(self.twitter_apis):
             if twitter_api == self.api_in_use:
-                index = i
-                break
-        self.api_in_use = self.twitter_apis[(index + 1) % len(self.twitter_apis)]
-        self.api = self.__authenticate(self.api_in_use)
+                self.api_in_use = self.twitter_apis[(i + 1) % len(self.twitter_apis)]
+                self.api = self.__authenticate(self.api_in_use)
+                return
+        raise Exception('API Key not found')
 
     def __limit_handled(self, cursor):
         '''used by the cursors, handles rate limit'''
