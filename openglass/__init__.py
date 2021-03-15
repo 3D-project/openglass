@@ -282,10 +282,10 @@ def main(cwd=None):
         if search:
             print('Press Ctrl-C to exit')
             res = t.search(q_search, q_run_for)
-            filename = q_search.replace(' ', '_')
+            filename = 'search_{}'.format(q_search.replace(' ', '_'))
         if search_new:
             print('Press Ctrl-C to exit')
-            filename = q_search_new.replace(' ', '_')
+            filename = 'search_new_{}'.format(q_search_new.replace(' ', '_'))
             res = []
 
             def callback(entry):
@@ -302,10 +302,10 @@ def main(cwd=None):
         elif timeline:
             print('Press Ctrl-C to exit')
             res = t.get_timeline(q_timeline, q_run_for)
-            filename = q_timeline.replace(' ', '_')
+            filename = 'timeline_{}'.format(q_timeline.replace(' ', '_'))
         elif timeline_new:
             print('Press Ctrl-C to exit')
-            filename = q_timeline_new.replace(' ', '_')
+            filename = 'timeline_new_{}'.format(q_timeline_new.replace(' ', '_'))
             res = []
 
             def callback(entry):
@@ -320,26 +320,27 @@ def main(cwd=None):
                 pass
         elif profile:
             res = t.get_profile(q_profile)
-            filename = q_profile.replace(' ', '_')
+            filename = 'profile_{}'.format(q_profile.replace(' ', '_'))
         elif followers:
             print('Press Ctrl-C to exit')
             res = t.get_followers(q_followers, q_run_for)
-            filename = q_followers.replace(' ', '_')
+            filename = 'followers_{}'.format(q_followers.replace(' ', '_'))
         elif retweeters:
             print('Press Ctrl-C to exit')
             res = t.get_retweeters(q_retweeters, q_run_for)
-            filename = q_retweeters.replace(' ', '_')
+            filename = 'retweeters_{}'.format(q_retweeters.replace(' ', '_'))
         elif retweeters_new:
             print('Press Ctrl-C to exit')
             if not run_for:
                 q_run_for = None
             res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
-            filename = q_retweeters_new.replace(' ', '_')
+            filename = 'retweeters_new_{}'.format(q_retweeters_new.replace(' ', '_'))
         elif watch_users:
             print('Press Ctrl-C to exit')
             if not run_for:
                 q_run_for = None
             res = t.watch_users(q_watch_users, q_run_for)
+            filename = 'watch_{}'.format(q_watch_users.replace(' ', '_'))
             filename = q_watch_users.replace(' ', '_')
 
     if telegram:
