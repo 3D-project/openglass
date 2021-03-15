@@ -2,12 +2,8 @@ import json
 import os
 import platform
 
-try:
-    import pwd
-except:
-    pass
 
-class Settings(object):
+class Settings:
     """
     This class stores all of the settings for openglass.
     """
@@ -72,7 +68,7 @@ class Settings(object):
                 with open(self.filename, "r") as f:
                     self._settings = json.loads(f.read())
                     self.fill_in_defaults()
-            except:
+            except Exception as e:
                 pass
 
     def save(self):

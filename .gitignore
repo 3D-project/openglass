@@ -1,3 +1,6 @@
 __pycache__
-config.json
+*.json
+*.jsonl
+*.csv
+*.txt
 *.session

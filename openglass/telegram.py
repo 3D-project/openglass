@@ -11,11 +11,12 @@ from telethon.tl.types import (
 )
 from urllib.parse import urlparse
 
+
 class Telegram:
 
     def __init__(self, telegram_apis):
         self.telegram_apis = telegram_apis
-        self.api =  self.__authenticate(self.telegram_apis)
+        self.api = self.__authenticate(self.telegram_apis)
 
     def get_channel(self, channel):
         client = self.api
@@ -52,7 +53,7 @@ class Telegram:
                     "is_bot": participant.bot,
                     "contact": participant.contact,
                     "mutual_contact": participant.mutual_contact,
-	            "scam": participant.scam
+                    "scam": participant.scam
                 }
             )
 
@@ -118,7 +119,6 @@ class Telegram:
                 client.sign_in(password=input('Password: '))
 
         return client
-
 
     def parse_domains(self, res_dict):
         filtered_dict = {}
