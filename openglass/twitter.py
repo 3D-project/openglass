@@ -2,6 +2,7 @@ import re
 import json
 import time
 import uuid
+import math
 import random
 import tweepy
 
@@ -61,6 +62,10 @@ class Twitter:
 
     def get_retweeters(self, tweet_id, run_for):
         '''returns up to 100 user IDs that have retweeted the tweet'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-retweeters-ids
+        count = 100
+        request_per_window = 300
+        profile = self.get_profile(user)
         self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters'
@@ -68,7 +73,7 @@ class Twitter:
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=100)
+            cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
             for retweeter in self.__limit_handled(cursor.items()):
                 retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
                 print('Number of results: {}'.format(len(retweeters)), end='\r')
@@ -110,13 +115,19 @@ class Twitter:
 
     def get_followers(self, user, run_for):
         '''returns the followers of a user, ordered from new to old'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-followers-list
+        count = 200
+        request_per_window = 15
+        profile = self.get_profile(user)
+        followers_count = profile['followers_count']
+        self.__show_running_time(followers_count, count, request_per_window)
         self.current_url = '/followers/list'
         self.type = 'get_followers'
         followers = []
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.followers, id=user, count=200)
+            cursor = tweepy.Cursor(self.api.followers, id=user, count=count)
             for follower in self.__limit_handled(cursor.items()):
                 followers.append(standarize_entry(self, follower._json))
                 print('Number of results: {}'.format(len(followers)), end='\r')
@@ -128,19 +139,27 @@ class Twitter:
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-users-show
+        request_per_window = 900
         self.current_url = '/users/show'
         self.type = 'get_profile'
         return standarize_entry(self, self.api.get_user(id=user)._json)
 
     def get_timeline(self, user, run_for):
         '''returns up to 3.200 of a user's most recent tweets'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/timelines/api-reference/get-statuses-user_timeline
+        count = 200
+        request_per_window = 1500
+        profile = self.get_profile(user)
+        statuses_count = min(3200, profile['statuses_count'])
+        self.__show_running_time(statuses_count, count, request_per_window)
         self.current_url = '/statuses/user_timeline'
         self.type = 'get_timeline'
         tweets = []
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=200)
+            cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=count)
             for tweet in self.__limit_handled(cursor.items()):
                 tweets.append(standarize_entry(self, tweet._json))
                 print('Number of results: {}'.format(len(tweets)), end='\r')
@@ -167,13 +186,16 @@ class Twitter:
 
     def search(self, q, run_for):
         '''searches for already published tweets that match the search'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/search/api-reference/get-search-tweets
+        count = 100
+        request_per_window = 450
         self.current_url = '/search/tweets'
         self.type = 'search'
         tweets = []
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.search, q=q, count=100)
+            cursor = tweepy.Cursor(self.api.search, q=q, count=count)
             for tweet in self.__limit_handled(cursor.items()):
                 tweets.append(standarize_entry(self, tweet._json))
                 print('Number of results: {}'.format(len(tweets)), end='\r')
@@ -274,6 +296,30 @@ class Twitter:
             pass
 
         return collected_data
+
+    def __show_running_time(self, records_amount, count, request_per_window):
+        apis_amount = len(self.twitter_apis)
+        records_per_round = count * request_per_window * apis_amount
+        rounds_needed = math.ceil(records_amount / records_per_round)
+        minutes = (rounds_needed - 1) * 15
+
+        if minutes == 0:
+            return
+        hours = int((minutes // 60) % 24)
+        days = int(minutes // 1440)
+        minutes = int(minutes % 60)
+        msg = ''
+        if days > 0:
+            s = '' if days == 1 else 's'
+            msg += '{} day{} '.format(days, s)
+        if hours > 0:
+            s = '' if hours == 1 else 's'
+            msg += '{} hour{} '.format(hours, s)
+        if minutes > 0:
+            s = '' if minutes == 1 else 's'
+            msg += '{} minute{} '.format(minutes, s)
+        msg = msg[:-1]
+        print('this will take approximately {} to finish'.format(msg))
 
     def __authenticate(self, credentials):
         '''authenticates to twitter with the given credentials'''
