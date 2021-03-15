@@ -68,7 +68,7 @@ class Twitter:
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id)
+            cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=100)
             for retweeter in self.__limit_handled(cursor.items()):
                 retweeters.append(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
                 print('Number of results: {}'.format(len(retweeters)), end='\r')
@@ -116,7 +116,7 @@ class Twitter:
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.followers, id=user)
+            cursor = tweepy.Cursor(self.api.followers, id=user, count=200)
             for follower in self.__limit_handled(cursor.items()):
                 followers.append(standarize_entry(self, follower._json))
                 print('Number of results: {}'.format(len(followers)), end='\r')
@@ -140,7 +140,7 @@ class Twitter:
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.user_timeline, id=user)
+            cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=200)
             for tweet in self.__limit_handled(cursor.items()):
                 tweets.append(standarize_entry(self, tweet._json))
                 print('Number of results: {}'.format(len(tweets)), end='\r')
@@ -173,7 +173,7 @@ class Twitter:
         start_time = time.time()
         print('Number of results: 0', end='\r')
         try:
-            cursor = tweepy.Cursor(self.api.search, q=q)
+            cursor = tweepy.Cursor(self.api.search, q=q, count=100)
             for tweet in self.__limit_handled(cursor.items()):
                 tweets.append(standarize_entry(self, tweet._json))
                 print('Number of results: {}'.format(len(tweets)), end='\r')
