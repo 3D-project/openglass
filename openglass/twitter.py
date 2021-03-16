@@ -4,6 +4,7 @@ import time
 import uuid
 import math
 import random
+import requests
 import tweepy
 
 
@@ -113,7 +114,21 @@ class Twitter:
         request_per_window = 900
         self.current_url = '/users/show'
         self.type = 'get_profile'
-        return standarize_entry(self, self.api.get_user(id=user)._json)
+
+        while True:
+            try:
+                return standarize_entry(self, self.api.get_user(id=user)._json)
+            except tweepy.error.TweepError as e:
+                if 'status code = 429' in str(e):
+                    self.__handle_time_limit()
+                    continue
+                elif 'Failed to send request' in str(e):
+                    time.sleep(5)
+                    continue
+                else:
+                    print('got unknown error: {}'.format(str(e)))
+                    time.sleep(5)
+                    continue
 
     def get_timeline(self, user, entry_handler):
         '''returns up to 3.200 of a user's most recent tweets'''
@@ -142,8 +157,15 @@ class Twitter:
                 stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
                 stream.filter(follow=users)
                 return
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
             except RotateKeys:
                 self.rotate_apikey()
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
                 continue
 
     def search(self, q, entry_handler):
@@ -169,8 +191,15 @@ class Twitter:
                 stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
                 stream.filter(track=q.split(' '))
                 return
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
             except RotateKeys:
                 self.rotate_apikey()
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
                 continue
 
     def __name_to_id(self, id_name_list):
@@ -286,13 +315,17 @@ class Twitter:
                 yield cursor.next()
             except StopIteration:
                 return None
-            except tweepy.RateLimitError:
-                self.__handle_time_limit()
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
                     self.__handle_time_limit()
+                    continue
+                elif 'Failed to send request' in str(e):
+                    time.sleep(5)
+                    continue
                 else:
-                    raise e
+                    print('got unknown error: {}'.format(str(e)))
+                    time.sleep(5)
+                    continue
 
     def __handle_time_limit(self):
         '''
