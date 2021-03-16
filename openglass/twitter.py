@@ -69,12 +69,23 @@ class Twitter:
         self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters'
-        try:
-            cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
-            for retweeter in self.__limit_handled(cursor.items()):
-                entry_handler(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
-        except KeyboardInterrupt:
-            pass
+
+        cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
+        while True:
+            try:
+                for retweeter in self.__limit_handled(cursor.items()):
+                    entry_handler(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
+                return
+            except RotateKeys:
+                self.__handle_time_limit()
+                old_cursor = cursor
+                cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
+                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
+            except KeyboardInterrupt:
+                return
 
     def get_retweeters_new(self, tweet_ids, entry_handler):
         '''returns the new retweeters from a given tweet'''
@@ -105,8 +116,19 @@ class Twitter:
         self.type = 'get_followers'
 
         cursor = tweepy.Cursor(self.api.followers, id=user, count=count)
-        for follower in self.__limit_handled(cursor.items()):
-            entry_handler(standarize_entry(self, follower._json))
+        while True:
+            try:
+                for follower in self.__limit_handled(cursor.items()):
+                    entry_handler(standarize_entry(self, follower._json))
+                return
+            except RotateKeys:
+                self.__handle_time_limit()
+                old_cursor = cursor
+                cursor = tweepy.Cursor(self.api.followers, id=user, count=count)
+                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
@@ -142,8 +164,19 @@ class Twitter:
         self.type = 'get_timeline'
 
         cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=count)
-        for tweet in self.__limit_handled(cursor.items()):
-            entry_handler(standarize_entry(self, tweet._json))
+        while True:
+            try:
+                for tweet in self.__limit_handled(cursor.items()):
+                    entry_handler(standarize_entry(self, tweet._json))
+                return
+            except RotateKeys:
+                self.__handle_time_limit()
+                old_cursor = cursor
+                cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=count)
+                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
 
     def get_timeline_new(self, users, entry_handler):
         '''returns new tweets of a list of users'''
@@ -177,8 +210,19 @@ class Twitter:
         self.type = 'search'
 
         cursor = tweepy.Cursor(self.api.search, q=q, count=count)
-        for tweet in self.__limit_handled(cursor.items()):
-            entry_handler(standarize_entry(self, tweet._json))
+        while True:
+            try:
+                for tweet in self.__limit_handled(cursor.items()):
+                    entry_handler(standarize_entry(self, tweet._json))
+                return
+            except RotateKeys:
+                self.__handle_time_limit()
+                old_cursor = cursor
+                cursor = tweepy.Cursor(self.api.search, q=q, count=count)
+                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
@@ -316,12 +360,10 @@ class Twitter:
             except StopIteration:
                 return
             except tweepy.RateLimitError:
-                self.__handle_time_limit()
-                continue
+                raise RotateKeys()
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
+                    raise RotateKeys()
                 elif 'Failed to send request' in str(e):
                     time.sleep(5)
                     continue
@@ -338,6 +380,10 @@ class Twitter:
         now = time.time()
         self.api_in_use['expired_at'][self.current_url] = now
 
+        if len(self.twitter_apis) == 1:
+            time.sleep(15 * 60)
+            return
+
         valid_apis = [twitter_api for twitter_api in self.twitter_apis if self.current_url not in twitter_api['expired_at'] or now - twitter_api['expired_at'][self.current_url] >= 15 * 60]
         if len(valid_apis) > 0:
             self.api_in_use = valid_apis[0]
@@ -346,8 +392,8 @@ class Twitter:
             self.twitter_apis.sort(reverse=False, key=lambda api: api['expired_at'][self.current_url])
             self.api_in_use = self.twitter_apis[0]
             time_expired = now - self.api_in_use['expired_at'][self.current_url]
+            time.sleep(15 * 60 - time_expired + 3)
             self.api = self.__authenticate(self.api_in_use)
-            time.sleep(15 * 60 - time_expired)
 
 
 def standarize_entry(obj, entry):
