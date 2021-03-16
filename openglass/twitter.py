@@ -27,7 +27,7 @@ class StreamListener(tweepy.StreamListener):
         super().__init__()
 
     def on_status(self, status):
-        self.callback(standarize_entry(self, status._json))
+        self.callback(self, status._json)
         MINS_15 = 15 * 60
         if time.time() - self.last_rotation > MINS_15:
             self.last_rotation = time.time()
@@ -74,7 +74,7 @@ class Twitter:
         while True:
             try:
                 for retweeter in self.__limit_handled(cursor.items()):
-                    entry_handler(standarize_entry(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)}))
+                    entry_handler(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)})
                 return
             except RotateKeys:
                 self.__handle_time_limit()
@@ -100,7 +100,7 @@ class Twitter:
                 return
             if tweet['retweeted_status']['id_str'] not in tweet_ids:
                 return
-            entry_handler(standarize_entry(self, tweet))
+            entry_handler(self, tweet)
 
         self.get_timeline_new(user_ids, callback)
 
@@ -119,7 +119,7 @@ class Twitter:
         while True:
             try:
                 for follower in self.__limit_handled(cursor.items()):
-                    entry_handler(standarize_entry(self, follower._json))
+                    entry_handler(self, follower._json)
                 return
             except RotateKeys:
                 self.__handle_time_limit()
@@ -139,7 +139,7 @@ class Twitter:
 
         while True:
             try:
-                return standarize_entry(self, self.api.get_user(id=user)._json)
+                return self.api.get_user(id=user)._json
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
                     self.__handle_time_limit()
@@ -167,7 +167,7 @@ class Twitter:
         while True:
             try:
                 for tweet in self.__limit_handled(cursor.items()):
-                    entry_handler(standarize_entry(self, tweet._json))
+                    entry_handler(self, tweet._json)
                 return
             except RotateKeys:
                 self.__handle_time_limit()
@@ -213,7 +213,7 @@ class Twitter:
         while True:
             try:
                 for tweet in self.__limit_handled(cursor.items()):
-                    entry_handler(standarize_entry(self, tweet._json))
+                    entry_handler(self, tweet._json)
                 return
             except RotateKeys:
                 self.__handle_time_limit()
@@ -280,7 +280,7 @@ class Twitter:
                 entry['tweet_id'] = tweet['retweeted_status']['id']
                 entry['retweet_id'] = tweet['id']
                 entry['tweet'] = tweet
-                entry_handler(standarize_entry(self, entry))
+                entry_handler(self, entry)
 
                 if tweet['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
 
@@ -293,7 +293,7 @@ class Twitter:
                         if len(old_tweet) == 1:
                             old_tweet = old_tweet[0]._json
                             entry['tweet'] = old_tweet
-                            entry_handler(standarize_entry(self, entry))
+                            entry_handler(self, entry)
                             tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet_id)
                     except Exception:
                         pass
@@ -303,7 +303,7 @@ class Twitter:
                 entry['user_id'] = tweet['user']['id']
                 entry['tweet_id'] = tweet['id']
                 entry['tweet'] = tweet
-                entry_handler(standarize_entry(self, entry))
+                entry_handler(self, entry)
                 tweets_by_user[user_id].append(tweet['id'])
             else:
                 pass  # somebody responded a tweet
@@ -394,21 +394,3 @@ class Twitter:
             time_expired = now - self.api_in_use['expired_at'][self.current_url]
             time.sleep(15 * 60 - time_expired + 3)
             self.api = self.__authenticate(self.api_in_use)
-
-
-def standarize_entry(obj, entry):
-    '''
-    remove unused entrys and add important fields
-    a unique id 'og_id', a search id 'og_search_id'
-    a timestamp 'og_timestamp' and a type 'og_type'
-    '''
-    keys_to_delete = ['id_str', 'profile_background_color', 'profile_link_color', 'profile_sidebar_border_color', 'profile_sidebar_fill_color', 'profile_text_color', 'favorited', 'filter_level']
-    for key_to_delete in keys_to_delete:
-        if key_to_delete in entry:
-            del entry[key_to_delete]
-    entry['og_id'] = str(uuid.uuid4())
-    entry['og_search_id'] = obj.search_id
-    entry['og_timestamp'] = int(time.time())
-    entry['og_type'] = obj.type
-    entry['og_endpoint'] = obj.current_url
-    return entry

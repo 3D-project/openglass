@@ -1,11 +1,12 @@
-import argparse
 import os
 import re
 import csv
-from datetime import date, datetime
-import json
 import sys
+import json
+import uuid
 import time
+import argparse
+from datetime import date, datetime
 from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
@@ -279,11 +280,12 @@ def main(cwd=None):
 
     if twitter:
 
-        def entry_handler(entry):
+        def entry_handler(obj, entry):
             nonlocal number_of_results
             number_of_results += 1
             if jsonl or csv:
                 print('Number of results: {}'.format(number_of_results), end='\r')
+            entry = standarize_entry(obj, entry)
             store_result([entry], csv, jsonl, filename, start_time)
             if run_for and time.time() - start_time > q_run_for:
                 raise KeyboardInterrupt
@@ -452,6 +454,24 @@ def getpath(nested_dict, value, prepath=()):
             p = getpath(v, value, path)  # recursive call
             if p is not None:
                 return p
+
+
+def standarize_entry(obj, entry):
+    '''
+    remove unused entrys and add important fields
+    a unique id 'og_id', a search id 'og_search_id'
+    a timestamp 'og_timestamp' and a type 'og_type'
+    '''
+    keys_to_delete = ['id_str', 'profile_background_color', 'profile_link_color', 'profile_sidebar_border_color', 'profile_sidebar_fill_color', 'profile_text_color', 'favorited', 'filter_level']
+    for key_to_delete in keys_to_delete:
+        if key_to_delete in entry:
+            del entry[key_to_delete]
+    entry['og_id'] = str(uuid.uuid4())
+    entry['og_search_id'] = obj.search_id
+    entry['og_timestamp'] = int(time.time())
+    entry['og_type'] = obj.type
+    entry['og_endpoint'] = obj.current_url
+    return entry
 
 
 # some functions to parse json date
