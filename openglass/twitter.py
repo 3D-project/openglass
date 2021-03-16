@@ -314,7 +314,10 @@ class Twitter:
             try:
                 yield cursor.next()
             except StopIteration:
-                return None
+                return
+            except tweepy.RateLimitError:
+                self.__handle_time_limit()
+                continue
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
                     self.__handle_time_limit()
