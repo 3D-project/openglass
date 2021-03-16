@@ -272,7 +272,20 @@ def main(cwd=None):
     else:
         utility.load_settings()
 
+    number_of_results = 0
+    filename = ''
+
     if twitter:
+
+        def entry_handler(entry):
+            nonlocal number_of_results
+            number_of_results += 1
+            if jsonl or csv:
+                print('Number of results: {}'.format(number_of_results), end='\r')
+            store_result([entry], csv, jsonl, filename, start_time)
+            if run_for and time.time() - start_time > q_run_for:
+                raise KeyboardInterrupt
+
         if config_filename:
             utility.load_settings(config_filename)
         else:
@@ -281,67 +294,65 @@ def main(cwd=None):
         t = Twitter(utility.get_setting('twitter_apis'))
         if search:
             print('Press Ctrl-C to exit')
-            res = t.search(q_search, q_run_for)
             filename = 'search_{}'.format(q_search.replace(' ', '_'))
+            try:
+                t.search(q_search, entry_handler)
+            except KeyboardInterrupt:
+                pass
         if search_new:
             print('Press Ctrl-C to exit')
             filename = 'search_new_{}'.format(q_search_new.replace(' ', '_'))
-            res = []
-
-            def callback(entry):
-                res.append(entry)
-                print('Number of results: {}'.format(len(res)), end='\r')
-                if run_for and time.time() - start_time > q_run_for:
-                    raise KeyboardInterrupt
-
-            print('Number of results: 0', end='\r')
             try:
-                t.search_new(q_search_new, callback)
+                t.search_new(q_search_new, entry_handler)
             except KeyboardInterrupt:
                 pass
         elif timeline:
             print('Press Ctrl-C to exit')
-            res = t.get_timeline(q_timeline, q_run_for)
             filename = 'timeline_{}'.format(q_timeline.replace(' ', '_'))
+            try:
+                t.get_timeline(q_timeline, entry_handler)
+            except KeyboardInterrupt:
+                pass
         elif timeline_new:
             print('Press Ctrl-C to exit')
             filename = 'timeline_new_{}'.format(q_timeline_new.replace(' ', '_'))
-            res = []
-
-            def callback(entry):
-                res.append(entry)
-                print('Number of results: {}'.format(len(res)), end='\r')
-                if run_for and time.time() - start_time > q_run_for:
-                    raise KeyboardInterrupt
-            print('Number of results: 0', end='\r')
             try:
-                t.get_timeline_new(q_timeline_new.split(' '), callback)
+                t.get_timeline_new(q_timeline_new.split(' '), entry_handler)
             except KeyboardInterrupt:
                 pass
         elif profile:
-            res = t.get_profile(q_profile)
             filename = 'profile_{}'.format(q_profile.replace(' ', '_'))
+            profile = t.get_profile(q_profile)
+            number_of_results += 1
+            store_result([profile], csv, jsonl, filename, start_time)
         elif followers:
             print('Press Ctrl-C to exit')
-            res = t.get_followers(q_followers, q_run_for)
             filename = 'followers_{}'.format(q_followers.replace(' ', '_'))
+            try:
+                t.get_followers(q_followers, entry_handler)
+            except KeyboardInterrupt:
+                pass
         elif retweeters:
             print('Press Ctrl-C to exit')
-            res = t.get_retweeters(q_retweeters, q_run_for)
             filename = 'retweeters_{}'.format(q_retweeters.replace(' ', '_'))
+            try:
+                t.get_retweeters(q_retweeters, entry_handler)
+            except KeyboardInterrupt:
+                pass
         elif retweeters_new:
             print('Press Ctrl-C to exit')
-            if not run_for:
-                q_run_for = None
-            res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
             filename = 'retweeters_new_{}'.format(q_retweeters_new.replace(' ', '_'))
+            try:
+                t.get_retweeters_new(q_retweeters_new.split(' '), entry_handler)
+            except KeyboardInterrupt:
+                pass
         elif watch_users:
             print('Press Ctrl-C to exit')
-            if not run_for:
-                q_run_for = None
-            res = t.watch_users(q_watch_users, q_run_for)
             filename = 'watch_{}'.format(q_watch_users.replace(' ', '_'))
-            filename = q_watch_users.replace(' ', '_')
+            try:
+                t.watch_users(q_watch_users, entry_handler)
+            except KeyboardInterrupt:
+                pass
 
     if telegram:
         if config_filename:
@@ -364,46 +375,61 @@ def main(cwd=None):
                 res = t.parse_channel_links(res)
             filename = q_channel_messages.replace(' ', '_')
 
-    store_result(res, csv, jsonl, filename, start_time)
+        store_result(res, csv, jsonl, filename, start_time)
+
+    if number_of_results == 0:
+        print('No results')
+        return
+
+    if jsonl:
+        filename = "{}-{}.jsonl".format(filename, start_time)
+    elif csv:
+        filename = "{}-{}.csv".format(filename, start_time)
+    if jsonl or csv:
+        print('\n[+] created {}'.format(filename))
 
 
 def store_result(data, csv, jsonl, filename, start_time):
     '''save the result in as a .csv, .jsonl or print as json'''
-    print('')
-    if len(data) == 0:
-        print('No results')
-        return
     if csv:
         filename = "{}-{}.csv".format(filename, start_time)
         save_as_csv(data, filename)
-        print('[+] created {}'.format(filename))
     elif jsonl:
         filename = "{}-{}.jsonl".format(filename, start_time)
         save_as_jsonl(data, filename)
-        print('[+] created {}'.format(filename))
     else:
-        print(json.dumps(data, indent=4, sort_keys=True))
+        for elem in data:
+            print(json.dumps(elem, indent=4, sort_keys=True))
 
 
 def save_as_csv(res_dict, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
     """
-    with open(csvfile, 'w', newline='') as csvfile:
+    if not os.path.isfile(csvfile):
+        csvfile = open(csvfile, 'w', newline='')
         fieldnames = res_dict[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
                                 extrasaction='ignore', delimiter=';')
         writer.writeheader()
-        for r in res_dict:
-            writer.writerow(r)
+    else:
+        csvfile = open(csvfile, 'a', newline='')
+        fieldnames = res_dict[0].keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
+                                extrasaction='ignore', delimiter=';')
+
+    for r in res_dict:
+        writer.writerow(r)
+
+    csvfile.close()
 
 
 def save_as_jsonl(res_dict, jsonfile):
     """
     Takes a list of dictionaries as input and outputs a JSON file.
     """
-    with open(jsonfile, 'w') as fh:
-        fh.write('\n'.join([json.dumps(line) for line in res_dict]))
+    with open(jsonfile, 'a') as fh:
+        fh.write('\n'.join([json.dumps(line) for line in res_dict]) + '\n')
 
 
 def search_dict(res_dict, query_value):
