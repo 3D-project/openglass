@@ -18,6 +18,8 @@ def main(cwd=None):
     """
 
     start_time = int(time.time())
+    now = datetime.now()
+    print('started at: {}'.format(now.strftime("%B %d, %H:%M")))
 
     utility = Utility()
 
