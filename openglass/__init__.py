@@ -215,17 +215,6 @@ def main(cwd=None):
             )
         return
 
-    num_output = 0
-    if jsonl:
-        num_output += 1
-    if csv:
-        num_output += 1
-    if url:
-        num_output += 1
-    if num_output > 1:
-        parser.print_help()
-        return
-
     if not telegram and not twitter:
         parser.print_help()
         return
@@ -270,7 +259,7 @@ def main(cwd=None):
         return
 
     if run_for:
-        if re.search(r'\d+[smhd]', q_run_for) is None:
+        if re.search(r'^\d+[smhd]$', q_run_for) is None:
             parser.print_help()
             return
         amount = q_run_for[:-1]
