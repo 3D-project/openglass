@@ -288,7 +288,7 @@ def main(cwd=None):
             if jsonl or csv:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
-            store_result([entry], csv, jsonl, filename, start_time)
+            store_result(entry, csv, jsonl, filename, start_time)
             if run_for and time.time() - start_time > q_run_for:
                 raise KeyboardInterrupt
 
@@ -330,7 +330,7 @@ def main(cwd=None):
             filename = 'profile_{}'.format(q_profile.replace(' ', '_'))
             profile = t.get_profile(q_profile)
             number_of_results += 1
-            store_result([profile], csv, jsonl, filename, start_time)
+            store_result(profile, csv, jsonl, filename, start_time)
         elif followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(q_followers.replace(' ', '_'))
@@ -380,8 +380,8 @@ def main(cwd=None):
             if channel_links:
                 res = t.parse_channel_links(res)
             filename = q_channel_messages.replace(' ', '_')
-
-        store_result(res, csv, jsonl, filename, start_time)
+        for entry in res:
+            store_result(entry, csv, jsonl, filename, start_time)
 
     if number_of_results == 0:
         print('No results')
@@ -395,47 +395,47 @@ def main(cwd=None):
         print('\n[+] created {}'.format(filename))
 
 
-def store_result(data, csv, jsonl, filename, start_time):
+def store_result(entry, csv, jsonl, filename, start_time):
     '''save the result in as a .csv, .jsonl or print as json'''
     if csv:
         filename = "{}-{}.csv".format(filename, start_time)
-        save_as_csv(data, filename)
+        save_as_csv(entry, filename)
     elif jsonl:
         filename = "{}-{}.jsonl".format(filename, start_time)
-        save_as_jsonl(data, filename)
+        save_as_jsonl(entry, filename)
     else:
-        for elem in data:
-            print(json.dumps(elem, indent=4, sort_keys=True))
+        print(json.dumps(entry, indent=4, sort_keys=True))
 
 
-def save_as_csv(res_dict, csvfile):
+def save_as_csv(entry, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
     """
     if not os.path.isfile(csvfile):
         csvfile = open(csvfile, 'w', newline='')
-        fieldnames = res_dict[0].keys()
+        fieldnames = entry.keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
                                 extrasaction='ignore', delimiter=';')
         writer.writeheader()
     else:
         csvfile = open(csvfile, 'a', newline='')
-        fieldnames = res_dict[0].keys()
+        fieldnames = entry.keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
                                 extrasaction='ignore', delimiter=';')
 
-    for r in res_dict:
-        writer.writerow(r)
+    writer.writerow(entry)
 
     csvfile.close()
 
 
-def save_as_jsonl(res_dict, jsonfile):
+def save_as_jsonl(entry, jsonfile):
     """
-    Takes a list of dictionaries as input and outputs a JSON file.
+    Takes an entry as input and saves it in a JSON L file.
     """
-    with open(jsonfile, 'a') as fh:
-        fh.write('\n'.join([json.dumps(line) for line in res_dict]) + '\n')
+    # use os module to increase speed
+    fd = os.open(jsonfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+    os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
+    os.close(fd)
 
 
 def search_dict(res_dict, query_value):
