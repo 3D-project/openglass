@@ -2,6 +2,7 @@ import re
 import json
 import time
 import uuid
+import http
 import math
 import random
 import requests
@@ -10,8 +11,8 @@ import tweepy
 
 class RotateKeys(Exception):
     '''
-    exception used for killing the stream and
-    creating it again with new credentials each 15 minutes
+    exception used for repacing the cursor or stream and
+    creating it again with new credentials
     '''
     pass
 
@@ -84,8 +85,16 @@ class Twitter:
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
                 continue
-            except KeyboardInterrupt:
-                return
+            except http.client.IncompleteRead:
+                time.sleep(5)
+                continue
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
+                continue
 
     def get_retweeters_new(self, tweet_ids, entry_handler):
         '''returns the new retweeters from a given tweet'''
@@ -128,6 +137,16 @@ class Twitter:
                 cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
+            except http.client.IncompleteRead:
+                time.sleep(5)
+                continue
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
                 continue
 
     def get_profile(self, user):
@@ -177,6 +196,16 @@ class Twitter:
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
                 continue
+            except http.client.IncompleteRead:
+                time.sleep(5)
+                continue
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
+                continue
 
     def get_timeline_new(self, users, entry_handler):
         '''returns new tweets of a list of users'''
@@ -190,9 +219,6 @@ class Twitter:
                 stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
                 stream.filter(follow=users)
                 return
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
             except RotateKeys:
                 self.rotate_apikey()
                 continue
@@ -222,6 +248,16 @@ class Twitter:
                 cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
+            except http.client.IncompleteRead:
+                time.sleep(5)
+                continue
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
                 continue
 
     def search_new(self, q, entry_handler):
