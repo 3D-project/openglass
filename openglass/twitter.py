@@ -104,7 +104,7 @@ class Twitter:
 
         user_ids = [tweet._json['user']['id_str'] for tweet in self.api.statuses_lookup(tweet_ids)]
 
-        def callback(tweet):
+        def callback(obj, tweet):
             if 'retweeted_status' not in tweet:
                 return
             if tweet['retweeted_status']['id_str'] not in tweet_ids:
@@ -303,7 +303,7 @@ class Twitter:
         for user_id in user_ids:
             tweets_by_user[int(user_id)] = []
 
-        def callback(tweet):
+        def callback(obj, tweet):
             is_own_tweet = str(tweet['user']['id']) in user_ids
             is_retweet = 'retweeted_status' in tweet
             if is_retweet and tweet['retweeted_status']['user']['id_str'] not in user_ids:
