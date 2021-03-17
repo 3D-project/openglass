@@ -404,12 +404,12 @@ def store_result(data, csv, jsonl, url, q_url, filename, start_time):
     if csv:
         filename = "{}-{}.csv".format(filename, start_time)
         save_as_csv(data, filename)
-    elif jsonl:
+    if jsonl:
         filename = "{}-{}.jsonl".format(filename, start_time)
         save_as_jsonl(data, filename)
-    elif url:
+    if url:
         asyncio.run(send_to_url(data, q_url))
-    else:
+    if not csv and not jsonl and not url:
         for elem in data:
             print(json.dumps(elem, indent=4, sort_keys=True))
 
