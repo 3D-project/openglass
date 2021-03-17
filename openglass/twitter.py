@@ -67,12 +67,12 @@ class Twitter:
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-retweeters-ids
         count = 100
         request_per_window = 300
-        self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters'
 
         cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
         while True:
+            self.current_url = '/statuses/retweeters/ids'
             try:
                 for retweeter in self.__limit_handled(cursor.items()):
                     entry_handler(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)})
@@ -96,13 +96,42 @@ class Twitter:
                 time.sleep(5)
                 continue
 
+    def statuses_lookup(self, tweet_ids):
+        '''returns detail data from a list of tweet ids'''
+        # https://developer.twitter.com/en/docs/tweets/post-and-engage/api-reference/get-statuses-lookup
+        print('\nstatuses_lookup')
+        max_per_request = 100
+        request_per_window = 300
+        if self.type == '':
+            self.type = 'statuses_lookup'
+        tweets_data = []
+
+        while True:
+            self.current_url = '/statuses/lookup'
+            try:
+                if len(tweet_ids) == 0:
+                    return tweets_data
+                batch = tweet_ids[:max_per_request]
+                tweet_ids = tweet_ids[max_per_request:]
+                tweets_data += [tweet._json for tweet in self.api.statuses_lookup(batch)]
+            except tweepy.error.TweepError as e:
+                if 'status code = 429' in str(e):
+                    self.__handle_time_limit()
+                    continue
+                elif 'Failed to send request' in str(e):
+                    time.sleep(5)
+                    continue
+                else:
+                    print('got unknown error: {}'.format(str(e)))
+                    time.sleep(5)
+                    continue
+
     def get_retweeters_new(self, tweet_ids, entry_handler):
         '''returns the new retweeters from a given tweet'''
-        self.current_url = '/statuses/retweeters/ids'
         if self.type == '':
             self.type = 'get_retweeters_new'
 
-        user_ids = [tweet._json['user']['id_str'] for tweet in self.api.statuses_lookup(tweet_ids)]
+        user_ids = [tweet['user']['id_str'] for tweet in self.statuses_lookup(tweet_ids)]
 
         def callback(obj, tweet):
             if 'retweeted_status' not in tweet:
@@ -118,14 +147,15 @@ class Twitter:
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-followers-list
         count = 200
         request_per_window = 15
+        if self.type == '':
+            self.type = 'get_followers'
         profile = self.get_profile(user)
         followers_count = profile['followers_count']
         self.__show_running_time(followers_count, count, request_per_window)
-        self.current_url = '/followers/list'
-        self.type = 'get_followers'
 
         cursor = tweepy.Cursor(self.api.followers, id=user, count=count)
         while True:
+            self.current_url = '/followers/list'
             try:
                 for follower in self.__limit_handled(cursor.items()):
                     entry_handler(self, follower._json)
@@ -153,10 +183,11 @@ class Twitter:
         '''returns the profile information of a user'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-users-show
         request_per_window = 900
-        self.current_url = '/users/show'
-        self.type = 'get_profile'
+        if self.type == '':
+            self.type = 'get_profile'
 
         while True:
+            self.current_url = '/users/show'
             try:
                 return self.api.get_user(id=user)._json
             except tweepy.error.TweepError as e:
@@ -179,11 +210,12 @@ class Twitter:
         profile = self.get_profile(user)
         statuses_count = min(3200, profile['statuses_count'])
         self.__show_running_time(statuses_count, count, request_per_window)
-        self.current_url = '/statuses/user_timeline'
-        self.type = 'get_timeline'
+        if self.type == '':
+            self.type = 'get_timeline'
 
         cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=count)
         while True:
+            self.current_url = '/statuses/user_timeline'
             try:
                 for tweet in self.__limit_handled(cursor.items()):
                     entry_handler(self, tweet._json)
@@ -209,11 +241,11 @@ class Twitter:
 
     def get_timeline_new(self, users, entry_handler):
         '''returns new tweets of a list of users'''
-        self.current_url = '/statuses/user_timeline'
         if self.type == '':
             self.type = 'get_timeline_new'
 
         while True:
+            self.current_url = '/statuses/user_timeline'
             try:
                 stream_listener = StreamListener(self, entry_handler)
                 stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
@@ -232,11 +264,12 @@ class Twitter:
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/search/api-reference/get-search-tweets
         count = 100
         request_per_window = 450
-        self.current_url = '/search/tweets'
-        self.type = 'search'
+        if self.type == '':
+            self.type = 'search'
 
         cursor = tweepy.Cursor(self.api.search, q=q, count=count)
         while True:
+            self.current_url = '/search/tweets'
             try:
                 for tweet in self.__limit_handled(cursor.items()):
                     entry_handler(self, tweet._json)
@@ -262,10 +295,11 @@ class Twitter:
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
-        self.current_url = '/search/tweets'
-        self.type = 'search_new'
+        if self.type == '':
+            self.type = 'search_new'
 
         while True:
+            self.current_url = '/search/tweets'
             try:
                 stream_listener = StreamListener(self, entry_handler)
                 stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
@@ -294,8 +328,8 @@ class Twitter:
 
     def watch_users(self, user_ids, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
-        self.type = 'watch_users'
-        self.current_url = '/statuses/user_timeline'
+        if self.type == '':
+            self.type = 'watch_users'
         user_ids = self.__name_to_id(user_ids.split(' '))
         start_time = time.time()
         collected_data = []
@@ -319,20 +353,13 @@ class Twitter:
                 entry_handler(self, entry)
 
                 if tweet['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
-
                     entry = {}
                     entry['type'] = 'old_tweet'
                     entry['user_id'] = tweet['retweeted_status']['user']['id']
                     entry['tweet_id'] = tweet['retweeted_status']['id']
-                    try:
-                        old_tweet = self.api.statuses_lookup([tweet['retweeted_status']['id']])
-                        if len(old_tweet) == 1:
-                            old_tweet = old_tweet[0]._json
-                            entry['tweet'] = old_tweet
-                            entry_handler(self, entry)
-                            tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet_id)
-                    except Exception:
-                        pass
+                    entry['tweet'] = self.statuses_lookup([tweet['retweeted_status']['id']])[0]
+                    entry_handler(self, entry)
+                    tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet['id'])
             elif is_own_tweet:
                 entry = {}
                 entry['type'] = 'new_tweet'
