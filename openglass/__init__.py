@@ -5,6 +5,8 @@ import sys
 import json
 import uuid
 import time
+import aiohttp
+import asyncio
 import argparse
 from datetime import date, datetime
 from .twitter import Twitter
@@ -58,6 +60,12 @@ def main(cwd=None):
         "--jsonl",
         action='store_true',
         help="Stores results as jsonl",
+    )
+    parser.add_argument(
+        "--url",
+        metavar="URL to send the results to",
+        default=None,
+        help="Sends the results to the specified URL",
     )
     parser.add_argument(
         "--twitter",
@@ -158,6 +166,8 @@ def main(cwd=None):
     settings = bool(args.settings)
     csv = bool(args.csv)
     jsonl = bool(args.jsonl)
+    url = bool(args.url)
+    q_url = args.url
     domains = bool(args.domains)
     twitter = bool(args.twitter)
     timeline = bool(args.timeline)
@@ -205,7 +215,14 @@ def main(cwd=None):
             )
         return
 
-    if jsonl and csv:
+    num_output = 0
+    if jsonl:
+        num_output += 1
+    if csv:
+        num_output += 1
+    if url:
+        num_output += 1
+    if num_output > 1:
         parser.print_help()
         return
 
@@ -283,10 +300,10 @@ def main(cwd=None):
         def entry_handler(obj, entry):
             nonlocal number_of_results
             number_of_results += 1
-            if jsonl or csv:
+            if jsonl or csv or url:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
-            store_result([entry], csv, jsonl, filename, start_time)
+            store_result([entry], csv, jsonl, url, q_url, filename, start_time)
             if run_for and time.time() - start_time > q_run_for:
                 raise KeyboardInterrupt
 
@@ -328,7 +345,7 @@ def main(cwd=None):
             filename = 'profile_{}'.format(q_profile.replace(' ', '_'))
             profile = t.get_profile(q_profile)
             number_of_results += 1
-            store_result([profile], csv, jsonl, filename, start_time)
+            store_result([profile], csv, jsonl, url, q_url, filename, start_time)
         elif followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(q_followers.replace(' ', '_'))
@@ -379,7 +396,7 @@ def main(cwd=None):
                 res = t.parse_channel_links(res)
             filename = q_channel_messages.replace(' ', '_')
 
-        store_result(res, csv, jsonl, filename, start_time)
+        store_result(res, csv, jsonl, url, q_url, filename, start_time)
 
     if number_of_results == 0:
         print('No results')
@@ -393,7 +410,7 @@ def main(cwd=None):
         print('\n[+] created {}'.format(filename))
 
 
-def store_result(data, csv, jsonl, filename, start_time):
+def store_result(data, csv, jsonl, url, q_url, filename, start_time):
     '''save the result in as a .csv, .jsonl or print as json'''
     if csv:
         filename = "{}-{}.csv".format(filename, start_time)
@@ -401,9 +418,25 @@ def store_result(data, csv, jsonl, filename, start_time):
     elif jsonl:
         filename = "{}-{}.jsonl".format(filename, start_time)
         save_as_jsonl(data, filename)
+    elif url:
+        asyncio.run(send_to_url(data, q_url))
     else:
         for elem in data:
             print(json.dumps(elem, indent=4, sort_keys=True))
+
+
+async def send_to_url(data, url):
+    timeout = aiohttp.ClientTimeout(sock_read=0.001)
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=data, timeout=timeout) as resp:
+                pass
+        except aiohttp.client_exceptions.ClientConnectorError:
+            pass
+        except aiohttp.client_exceptions.ServerDisconnectedError:
+            pass
+        except asyncio.exceptions.TimeoutError:
+            pass
 
 
 def save_as_csv(res_dict, csvfile):
