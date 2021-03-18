@@ -75,7 +75,7 @@ class Twitter:
             self.current_url = '/statuses/retweeters/ids'
             try:
                 for retweeter in self.__limit_handled(cursor.items()):
-                    entry_handler(self, {'tweet_id': tweet_id, 'retweeter_id': str(retweeter)})
+                    entry_handler(self, {'retweeted_tid': tweet_id, 'retweeter_tid': retweeter})
                 return
             except RotateKeys:
                 self.__handle_time_limit()
@@ -351,26 +351,26 @@ class Twitter:
             if not is_own_tweet and is_retweet:
                 entry = {}
                 entry['type'] = 'retweet'
-                entry['retweeted_user_id'] = tweet['retweeted_status']['user']['id']
-                entry['retweeter_user_id'] = tweet['retweeted_status']['user']['id']
-                entry['tweet_id'] = tweet['retweeted_status']['id']
-                entry['retweet_id'] = tweet['id']
+                entry['retweeted_uid'] = tweet['retweeted_status']['user']['id']
+                entry['retweeter_uid'] = tweet['retweeted_status']['user']['id']
+                entry['retweeted_tid'] = tweet['retweeted_status']['id']
+                entry['retweeter_tid'] = tweet['id']
                 entry['tweet'] = tweet
                 entry_handler(self, entry)
 
                 if tweet['retweeted_status']['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
                     entry = {}
                     entry['type'] = 'old_tweet'
-                    entry['user_id'] = tweet['retweeted_status']['user']['id']
-                    entry['tweet_id'] = tweet['retweeted_status']['id']
+                    entry['uid'] = tweet['retweeted_status']['user']['id']
+                    entry['tid'] = tweet['retweeted_status']['id']
                     entry['tweet'] = self.statuses_lookup([tweet['retweeted_status']['id']])[0]
                     entry_handler(self, entry)
                     tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet['retweeted_status']['id'])
             elif is_own_tweet:
                 entry = {}
                 entry['type'] = 'new_tweet'
-                entry['user_id'] = tweet['user']['id']
-                entry['tweet_id'] = tweet['id']
+                entry['uid'] = tweet['user']['id']
+                entry['tid'] = tweet['id']
                 entry['tweet'] = tweet
                 entry_handler(self, entry)
                 tweets_by_user[tweet['user']['id']].append(tweet['id'])
