@@ -390,7 +390,7 @@ class Twitter:
                 entry = {}
                 entry['type'] = 'retweet'
                 entry['retweeted_uid'] = tweet['retweeted_status']['user']['id']
-                entry['retweeter_uid'] = tweet['retweeted_status']['user']['id']
+                entry['retweeter_uid'] = tweet['user']['id']
                 entry['retweeted_tid'] = tweet['retweeted_status']['id']
                 entry['retweeter_tid'] = tweet['id']
                 entry['tweet'] = tweet
