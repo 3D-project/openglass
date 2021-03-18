@@ -62,25 +62,18 @@ class Twitter:
         self.search_id = str(uuid.uuid4())
         self.type = ''
 
-    def get_retweeters(self, tweet_id, entry_handler):
-        '''returns up to 100 user IDs that have retweeted the tweet'''
-        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-retweeters-ids
-        count = 100
-        request_per_window = 300
-        if self.type == '':
-            self.type = 'get_retweeters'
-
-        cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
+    def __query_api_with_cursor(self, url_used, entry_handler, api, **kwargs):
+        cursor = tweepy.Cursor(api,  **kwargs)
         while True:
-            self.current_url = '/statuses/retweeters/ids'
+            self.current_url = url_used
             try:
-                for retweeter in self.__limit_handled(cursor.items()):
-                    entry_handler(self, {'retweeted_tid': tweet_id, 'retweeter_tid': retweeter})
+                for entry in self.__limit_handled(cursor.items()):
+                    entry_handler(self, entry._json)
                 return
             except RotateKeys:
                 self.__handle_time_limit()
                 old_cursor = cursor
-                cursor = tweepy.Cursor(self.api.retweeters, id=tweet_id, count=count)
+                cursor = tweepy.Cursor(api, **kwargs)
                 cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
@@ -95,6 +88,19 @@ class Twitter:
                 print('got unknown error: {}'.format(str(e)))
                 time.sleep(5)
                 continue
+
+    def get_retweeters(self, tweet_id, entry_handler):
+        '''returns up to 100 user IDs that have retweeted the tweet'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-retweeters-ids
+        count = 100
+        request_per_window = 300
+        if self.type == '':
+            self.type = 'get_retweeters'
+
+        def callback(obj, retweeter):
+            entry_handler(self, {'retweeted_tid': tweet_id, 'retweeter_tid': retweeter})
+
+        self.__query_api_with_cursor('/statuses/retweeters/ids', callback, self.api.retweeters, id=tweet_id, count=count)
 
     def statuses_lookup(self, tweet_ids):
         '''returns detail data from a list of tweet ids'''
@@ -155,31 +161,7 @@ class Twitter:
         followers_count = profile['followers_count']
         self.__show_running_time(followers_count, count, request_per_window)
 
-        cursor = tweepy.Cursor(self.api.followers, id=user, count=count)
-        while True:
-            self.current_url = '/followers/list'
-            try:
-                for follower in self.__limit_handled(cursor.items()):
-                    entry_handler(self, follower._json)
-                return
-            except RotateKeys:
-                self.__handle_time_limit()
-                old_cursor = cursor
-                cursor = tweepy.Cursor(self.api.followers, id=user, count=count)
-                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
-                continue
-            except http.client.IncompleteRead:
-                time.sleep(5)
-                continue
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+        self.__query_api_with_cursor('/followers/list', entry_handler, self.api.followers, id=user, count=count)
 
     def get_friends(self, user, entry_handler):
         '''returns the users that the user follows'''
@@ -193,31 +175,7 @@ class Twitter:
         self.__show_running_time(friends_count, count, request_per_window)
         user = self.__name_to_id([user])[0]
 
-        cursor = tweepy.Cursor(self.api.friends, id=user, count=count)
-        while True:
-            self.current_url = '/friends/list'
-            try:
-                for friend in self.__limit_handled(cursor.items()):
-                    entry_handler(self, friend._json)
-                return
-            except RotateKeys:
-                self.__handle_time_limit()
-                old_cursor = cursor
-                cursor = tweepy.Cursor(self.api.friends, id=user, count=count)
-                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
-                continue
-            except http.client.IncompleteRead:
-                time.sleep(5)
-                continue
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+        self.__query_api_with_cursor('/friends/list', entry_handler, self.api.friends, id=user, count=count)
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
@@ -256,31 +214,7 @@ class Twitter:
         if self.type == '':
             self.type = 'get_timeline'
 
-        cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=count)
-        while True:
-            self.current_url = '/statuses/user_timeline'
-            try:
-                for tweet in self.__limit_handled(cursor.items()):
-                    entry_handler(self, tweet._json)
-                return
-            except RotateKeys:
-                self.__handle_time_limit()
-                old_cursor = cursor
-                cursor = tweepy.Cursor(self.api.user_timeline, id=user, include_rts=True, count=count)
-                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
-                continue
-            except http.client.IncompleteRead:
-                time.sleep(5)
-                continue
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+        self.__query_api_with_cursor('/statuses/user_timeline', entry_handler, self.api.user_timeline, id=user, include_rts=True, count=count)
 
     def get_timeline_new(self, user_ids, entry_handler):
         '''returns new tweets of a list of users'''
@@ -311,31 +245,7 @@ class Twitter:
         if self.type == '':
             self.type = 'search'
 
-        cursor = tweepy.Cursor(self.api.search, q=q, count=count)
-        while True:
-            self.current_url = '/search/tweets'
-            try:
-                for tweet in self.__limit_handled(cursor.items()):
-                    entry_handler(self, tweet._json)
-                return
-            except RotateKeys:
-                self.__handle_time_limit()
-                old_cursor = cursor
-                cursor = tweepy.Cursor(self.api.search, q=q, count=count)
-                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
-                continue
-            except http.client.IncompleteRead:
-                time.sleep(5)
-                continue
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+        self.__query_api_with_cursor('/search/tweets', entry_handler, self.api.search, q=q, count=count)
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
