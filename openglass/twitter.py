@@ -181,6 +181,44 @@ class Twitter:
                 time.sleep(5)
                 continue
 
+    def get_friends(self, user, entry_handler):
+        '''returns the users that the user follows'''
+        # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-friends-list
+        count = 200
+        request_per_window = 15
+        if self.type == '':
+            self.type = 'get_friends'
+        profile = self.get_profile(user)
+        friends_count = profile['friends_count']
+        self.__show_running_time(friends_count, count, request_per_window)
+        user = self.__name_to_id([user])[0]
+
+        cursor = tweepy.Cursor(self.api.friends, id=user, count=count)
+        while True:
+            self.current_url = '/friends/list'
+            try:
+                for friend in self.__limit_handled(cursor.items()):
+                    entry_handler(self, friend._json)
+                return
+            except RotateKeys:
+                self.__handle_time_limit()
+                old_cursor = cursor
+                cursor = tweepy.Cursor(self.api.friends, id=user, count=count)
+                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
+                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                continue
+            except http.client.IncompleteRead:
+                time.sleep(5)
+                continue
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
+                continue
+
     def get_profile(self, user):
         '''returns the profile information of a user'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-users-show

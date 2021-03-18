@@ -100,7 +100,13 @@ def main(cwd=None):
         "--followers",
         metavar="USERNAME OR ID",
         default=None,
-        help="Specify the user to retrieve its profile",
+        help="Specify the user to retrieve the users that follow him/her",
+    )
+    parser.add_argument(
+        "--friends",
+        metavar="USERNAME OR ID",
+        default=None,
+        help="Specify the user to retrieve the users that is following",
     )
     parser.add_argument(
         "--retweeters",
@@ -174,6 +180,8 @@ def main(cwd=None):
     q_profile = args.profile
     followers = bool(args.followers)
     q_followers = args.followers
+    friends = bool(args.friends)
+    q_friends = args.friends
     retweeters = bool(args.retweeters)
     q_retweeters = args.retweeters
     retweeters_new = bool(args.retweeters_new)
@@ -232,6 +240,8 @@ def main(cwd=None):
         if profile:
             num_actions += 1
         if followers:
+            num_actions += 1
+        if friends:
             num_actions += 1
         if retweeters:
             num_actions += 1
@@ -337,6 +347,13 @@ def main(cwd=None):
             filename = 'followers_{}'.format(q_followers.replace(' ', '_'))
             try:
                 t.get_followers(q_followers, entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif friends:
+            print('Press Ctrl-C to exit')
+            filename = 'friends_{}'.format(q_friends.replace(' ', '_'))
+            try:
+                t.get_friends(q_friends, entry_handler)
             except KeyboardInterrupt:
                 pass
         elif retweeters:
