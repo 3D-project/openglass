@@ -329,6 +329,7 @@ def main(cwd=None):
         elif profile:
             filename = 'profile_{}'.format(q_profile.replace(' ', '_'))
             profile = t.get_profile(q_profile)
+            profile = standarize_entry(t, profile)
             number_of_results += 1
             store_result(profile, csv, jsonl, filename, start_time)
         elif followers:
@@ -458,16 +459,29 @@ def getpath(nested_dict, value, prepath=()):
                 return p
 
 
+def delete_unsued_keys(entry):
+    unused_keys = ['id_str', 'profile_background_color', 'profile_link_color', 'profile_sidebar_border_color', 'profile_sidebar_fill_color', 'profile_text_color', 'favorited', 'filter_level']
+    dict_keys = []
+    keys_to_delete = []
+    for key in entry:
+        if key in unused_keys:
+            keys_to_delete.append(key)
+        elif type(entry[key]) == dict:
+            dict_keys.append(key)
+    for k in keys_to_delete:
+        del entry[k]
+    for k in dict_keys:
+        delete_unsued_keys(entry[k])
+
+
 def standarize_entry(obj, entry):
     '''
     remove unused entrys and add important fields
     a unique id 'og_id', a search id 'og_search_id'
     a timestamp 'og_timestamp' and a type 'og_type'
     '''
-    keys_to_delete = ['id_str', 'profile_background_color', 'profile_link_color', 'profile_sidebar_border_color', 'profile_sidebar_fill_color', 'profile_text_color', 'favorited', 'filter_level']
-    for key_to_delete in keys_to_delete:
-        if key_to_delete in entry:
-            del entry[key_to_delete]
+
+    delete_unsued_keys(entry)
     entry['og_id'] = str(uuid.uuid4())
     entry['og_search_id'] = obj.search_id
     entry['og_timestamp'] = int(time.time())
