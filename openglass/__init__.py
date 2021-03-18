@@ -86,9 +86,9 @@ def main(cwd=None):
     )
     parser.add_argument(
         "--timeline-new",
-        metavar="users IDs separated with spaces",
+        metavar="users NAMEs or IDs separated with spaces",
         default=None,
-        help="Specify the user to retrieve its timeline",
+        help="Specify the user to retrieve their new tweets",
     )
     parser.add_argument(
         "--profile",
@@ -356,7 +356,7 @@ def main(cwd=None):
             print('Press Ctrl-C to exit')
             filename = 'watch_{}'.format(q_watch_users.replace(' ', '_'))
             try:
-                t.watch_users(q_watch_users, entry_handler)
+                t.watch_users(q_watch_users.split(' '), entry_handler)
             except KeyboardInterrupt:
                 pass
 

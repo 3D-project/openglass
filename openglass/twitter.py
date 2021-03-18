@@ -99,7 +99,6 @@ class Twitter:
     def statuses_lookup(self, tweet_ids):
         '''returns detail data from a list of tweet ids'''
         # https://developer.twitter.com/en/docs/tweets/post-and-engage/api-reference/get-statuses-lookup
-        print('\nstatuses_lookup')
         max_per_request = 100
         request_per_window = 300
         if self.type == '':
@@ -114,6 +113,9 @@ class Twitter:
                 batch = tweet_ids[:max_per_request]
                 tweet_ids = tweet_ids[max_per_request:]
                 tweets_data += [tweet._json for tweet in self.api.statuses_lookup(batch)]
+            except tweepy.RateLimitError:
+                self.__handle_time_limit()
+                continue
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
                     self.__handle_time_limit()
@@ -190,6 +192,9 @@ class Twitter:
             self.current_url = '/users/show'
             try:
                 return self.api.get_user(id=user)._json
+            except tweepy.RateLimitError:
+                self.__handle_time_limit()
+                continue
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
                     self.__handle_time_limit()
@@ -239,17 +244,18 @@ class Twitter:
                 time.sleep(5)
                 continue
 
-    def get_timeline_new(self, users, entry_handler):
+    def get_timeline_new(self, user_ids, entry_handler):
         '''returns new tweets of a list of users'''
         if self.type == '':
             self.type = 'get_timeline_new'
+        user_ids = self.__name_to_id(user_ids)
 
         while True:
             self.current_url = '/statuses/user_timeline'
             try:
                 stream_listener = StreamListener(self, entry_handler)
                 stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
-                stream.filter(follow=users)
+                stream.filter(follow=user_ids)
                 return
             except RotateKeys:
                 self.rotate_apikey()
@@ -330,7 +336,7 @@ class Twitter:
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
             self.type = 'watch_users'
-        user_ids = self.__name_to_id(user_ids.split(' '))
+        user_ids = self.__name_to_id(user_ids)
         start_time = time.time()
         collected_data = []
         tweets_by_user = {}
@@ -352,14 +358,14 @@ class Twitter:
                 entry['tweet'] = tweet
                 entry_handler(self, entry)
 
-                if tweet['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
+                if tweet['retweeted_status']['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
                     entry = {}
                     entry['type'] = 'old_tweet'
                     entry['user_id'] = tweet['retweeted_status']['user']['id']
                     entry['tweet_id'] = tweet['retweeted_status']['id']
                     entry['tweet'] = self.statuses_lookup([tweet['retweeted_status']['id']])[0]
                     entry_handler(self, entry)
-                    tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet['id'])
+                    tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet['retweeted_status']['id'])
             elif is_own_tweet:
                 entry = {}
                 entry['type'] = 'new_tweet'
@@ -367,7 +373,7 @@ class Twitter:
                 entry['tweet_id'] = tweet['id']
                 entry['tweet'] = tweet
                 entry_handler(self, entry)
-                tweets_by_user[user_id].append(tweet['id'])
+                tweets_by_user[tweet['user']['id']].append(tweet['id'])
             else:
                 pass  # somebody responded a tweet
 
