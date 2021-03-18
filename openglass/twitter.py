@@ -332,7 +332,7 @@ class Twitter:
                 id_list.append(str(profile['id']))
         return id_list
 
-    def watch_users(self, user_ids, entry_handler):
+    def watch(self, user_ids, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
             self.type = 'watch_users'

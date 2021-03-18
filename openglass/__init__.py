@@ -121,7 +121,7 @@ def main(cwd=None):
         help="Specify for how long should openglass run. Example 100s, 5h, 3d",
     )
     parser.add_argument(
-        "--watch-users",
+        "--watch",
         metavar="users NAMEs or IDs separated with spaces",
         default=None,
         help="Get all the tweets and their retweets of each watched user",
@@ -178,8 +178,8 @@ def main(cwd=None):
     q_retweeters = args.retweeters
     retweeters_new = bool(args.retweeters_new)
     q_retweeters_new = args.retweeters_new
-    watch_users = bool(args.watch_users)
-    q_watch_users = args.watch_users
+    watch = bool(args.watch)
+    q_watch = args.watch
     telegram = bool(args.telegram)
     channel_users = bool(args.channel_users)
     q_channel_users = args.channel_users
@@ -237,7 +237,7 @@ def main(cwd=None):
             num_actions += 1
         if retweeters_new:
             num_actions += 1
-        if watch_users:
+        if watch:
             num_actions += 1
 
     if telegram:
@@ -352,11 +352,11 @@ def main(cwd=None):
                 t.get_retweeters_new(q_retweeters_new.split(' '), entry_handler)
             except KeyboardInterrupt:
                 pass
-        elif watch_users:
+        elif watch:
             print('Press Ctrl-C to exit')
-            filename = 'watch_{}'.format(q_watch_users.replace(' ', '_'))
+            filename = 'watch_{}'.format(q_watch.replace(' ', '_'))
             try:
-                t.watch_users(q_watch_users.split(' '), entry_handler)
+                t.watch(q_watch.split(' '), entry_handler)
             except KeyboardInterrupt:
                 pass
 
