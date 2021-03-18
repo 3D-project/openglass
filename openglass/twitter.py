@@ -104,6 +104,30 @@ class Twitter:
                 time.sleep(5)
                 continue
 
+    def __query_api_raw(self, url_used, api, *args, **kwargs):
+        while True:
+            self.current_url = url_used
+            try:
+                result = api(*args, **kwargs)
+                if type(result) == list:
+                    return [entry._json for entry in result]
+                else:
+                    return result._json
+            except tweepy.RateLimitError:
+                self.__handle_time_limit()
+                continue
+            except tweepy.error.TweepError as e:
+                if 'status code = 429' in str(e):
+                    self.__handle_time_limit()
+                    continue
+                elif 'Failed to send request' in str(e):
+                    time.sleep(5)
+                    continue
+                else:
+                    print('got unknown error: {}'.format(str(e)))
+                    time.sleep(5)
+                    continue
+
     def get_retweeters(self, tweet_id, entry_handler):
         '''returns up to 100 user IDs that have retweeted the tweet'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-retweeters-ids
@@ -124,30 +148,13 @@ class Twitter:
         request_per_window = 300
         if self.type == '':
             self.type = 'statuses_lookup'
-        tweets_data = []
 
-        while True:
-            self.current_url = '/statuses/lookup'
-            try:
-                if len(tweet_ids) == 0:
-                    return tweets_data
-                batch = tweet_ids[:max_per_request]
-                tweet_ids = tweet_ids[max_per_request:]
-                tweets_data += [tweet._json for tweet in self.api.statuses_lookup(batch)]
-            except tweepy.RateLimitError:
-                self.__handle_time_limit()
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+        tweets_data = []
+        while len(tweet_ids) > 0:
+            batch = tweet_ids[:max_per_request]
+            tweet_ids = tweet_ids[max_per_request:]
+            tweets_data += self.__query_api_raw('/statuses/lookup', self.api.statuses_lookup, batch)
+        return tweets_data
 
     def get_retweeters_new(self, tweet_ids, entry_handler):
         '''returns the new retweeters from a given tweet'''
@@ -199,24 +206,7 @@ class Twitter:
         if self.type == '':
             self.type = 'get_profile'
 
-        while True:
-            self.current_url = '/users/show'
-            try:
-                return self.api.get_user(id=user)._json
-            except tweepy.RateLimitError:
-                self.__handle_time_limit()
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+        return self.__query_api_raw('/users/show', self.api.get_user, id=user)
 
     def get_timeline(self, user, entry_handler):
         '''returns up to 3.200 of a user's most recent tweets'''
@@ -236,6 +226,7 @@ class Twitter:
         if self.type == '':
             self.type = 'get_timeline_new'
         user_ids = self.__name_to_id(user_ids)
+
         self.__query_api_with_stream(entry_handler, follow=user_ids)
 
     def search(self, q, entry_handler):
@@ -252,7 +243,8 @@ class Twitter:
         '''returns new tweets that match the search'''
         if self.type == '':
             self.type = 'search_new'
-        self.__query_api_with_stream(entry_handler, follow=track=q.split(' '))
+
+        self.__query_api_with_stream(entry_handler, track=q.split(' '))
 
     def __name_to_id(self, id_name_list):
         id_list = []
