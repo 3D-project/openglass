@@ -335,7 +335,7 @@ class Twitter:
     def watch(self, user_ids, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
-            self.type = 'watch_users'
+            self.type = 'watch'
         user_ids = self.__name_to_id(user_ids)
         start_time = time.time()
         collected_data = []
