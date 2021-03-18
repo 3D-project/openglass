@@ -89,6 +89,21 @@ class Twitter:
                 time.sleep(5)
                 continue
 
+    def __query_api_with_stream(self, entry_handler, **kwargs):
+        while True:
+            try:
+                stream_listener = StreamListener(self, entry_handler)
+                stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
+                stream.filter(**kwargs)
+                return
+            except RotateKeys:
+                self.rotate_apikey()
+                continue
+            except tweepy.error.TweepError as e:
+                print('got unknown error: {}'.format(str(e)))
+                time.sleep(5)
+                continue
+
     def get_retweeters(self, tweet_id, entry_handler):
         '''returns up to 100 user IDs that have retweeted the tweet'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-statuses-retweeters-ids
@@ -221,21 +236,7 @@ class Twitter:
         if self.type == '':
             self.type = 'get_timeline_new'
         user_ids = self.__name_to_id(user_ids)
-
-        while True:
-            self.current_url = '/statuses/user_timeline'
-            try:
-                stream_listener = StreamListener(self, entry_handler)
-                stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
-                stream.filter(follow=user_ids)
-                return
-            except RotateKeys:
-                self.rotate_apikey()
-                continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+        self.__query_api_with_stream(entry_handler, follow=user_ids)
 
     def search(self, q, entry_handler):
         '''searches for already published tweets that match the search'''
@@ -251,24 +252,7 @@ class Twitter:
         '''returns new tweets that match the search'''
         if self.type == '':
             self.type = 'search_new'
-
-        while True:
-            self.current_url = '/search/tweets'
-            try:
-                stream_listener = StreamListener(self, entry_handler)
-                stream = tweepy.Stream(auth=self.api.auth, listener=stream_listener)
-                stream.filter(track=q.split(' '))
-                return
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except RotateKeys:
-                self.rotate_apikey()
-                continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+        self.__query_api_with_stream(entry_handler, follow=track=q.split(' '))
 
     def __name_to_id(self, id_name_list):
         id_list = []
