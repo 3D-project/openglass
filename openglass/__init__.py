@@ -70,25 +70,25 @@ def main(cwd=None):
         "--search",
         metavar="SEARCH QUERY",
         default=None,
-        help="Specify the term to search",
+        help="Specify the terms to search for old tweets",
     )
     parser.add_argument(
         "--search-new",
         metavar="SEARCH QUERY",
         default=None,
-        help="Specify the term to search",
+        help="Specify the terms to search for new tweets",
     )
     parser.add_argument(
         "--timeline",
         metavar="USERNAME OR ID",
         default=None,
-        help="Specify the user to retrieve its timeline",
+        help="Specify the user to retrieve its past tweets",
     )
     parser.add_argument(
         "--timeline-new",
-        metavar="users NAMEs or IDs separated with spaces",
+        metavar="USERNAMES OR IDS",
         default=None,
-        help="Specify the user to retrieve their new tweets",
+        help="Specify the users to retrieve their new tweets",
     )
     parser.add_argument(
         "--profile",
@@ -110,27 +110,27 @@ def main(cwd=None):
     )
     parser.add_argument(
         "--retweeters",
-        metavar="Tweet ID",
+        metavar="TWEET ID",
         default=None,
-        help="Specify the Tweet id to retrieve the retweeters",
+        help="Specify the tweet to retrieve the users that retweeted it",
     )
     parser.add_argument(
         "--retweeters-new",
-        metavar="Tweet IDs separated with spaces",
+        metavar="TWEET IDS",
         default=None,
-        help="Specify the Tweet ids to retrieve the new retweeters",
+        help="Specify the tweets to retrieve the new retweeters",
+    )
+    parser.add_argument(
+        "--watch",
+        metavar="USERNAMES OR IDS",
+        default=None,
+        help="Specify the users to retrieve all their new tweets and their retweets",
     )
     parser.add_argument(
         "--run-for",
         metavar="Amount of time",
         default=None,
         help="Specify for how long should openglass run. Example 100s, 5h, 3d",
-    )
-    parser.add_argument(
-        "--watch",
-        metavar="users NAMEs or IDs separated with spaces",
-        default=None,
-        help="Get all the tweets and their retweets of each watched user",
     )
     parser.add_argument(
         "--telegram",

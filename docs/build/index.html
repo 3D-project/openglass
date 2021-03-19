@@ -36,18 +36,10 @@
 </div>
 <p>OpenGlass is a tool to query various social network and search for different
 types of information.</p>
-<p>At this moment it is in it’s alpha version and supports limited search functionalities
+<p>At this moment it is in alpha version and supports limited search functionalities
 for <a class="reference external" href="https://www.twitter.com">Twitter</a> and <a class="reference external" href="https://www.telegram.org">Telegram</a>.</p>
 <p>OpenGlass was designed as an <a class="reference external" href="https://en.wikipedia.org/wiki/Open-source_intelligence">OSINT</a> tool to identify and discover
 disinformation campaigns.</p>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
-</ul>
 <div class="section" id="getting-started">
 <h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
 <p>OpenGlass can be installed via pypi by running:</p>
@@ -92,6 +84,8 @@ in the code repository.</p>
 </div>
 <div class="section" id="run-queries">
 <h3>Run queries<a class="headerlink" href="#run-queries" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id1">
+<h4>Telegram<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
 <p>To query telegram you need to use the <code class="docutils literal notranslate"><span class="pre">--telegram</span></code> switch</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">telegram</span>
 <span class="o">--</span><span class="n">channel</span><span class="o">-</span><span class="n">users</span> <span class="n">CHANNEL</span> <span class="n">ID</span>
@@ -106,33 +100,53 @@ in the code repository.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$  openglass --config config.json --telegram --channel-users &quot;ChannelID&quot;
 </pre></div>
 </div>
-<p>The switch ` –csv ` prints result to a file called {query}-{timestamp}.csv</p>
 <p>More specific queries are possible. Specifically the <code class="docutils literal notranslate"><span class="pre">--domains</span></code> switch returns
 a list of high level domains (or <a class="reference external" href="https://en.wikipedia.org/wiki/Fully_qualified_domain_name">FQDN</a>).</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">--channel-links</span></code> switch returns a list of shared telegram channels.</p>
 <p>These two switch are important if you want to know which links are shared in a
 <a class="reference external" href="https://www.telegram.org">Telegram</a> channel and which other channels are cross referenced.</p>
-<p><a class="reference external" href="https://www.twitter.com">Twitter</a> support on openglass is still very experimental. In the next few versions
-we hope to provide more analysis capabilities and the possibilities to run queries
-using different APIs keys in order to avoid <a class="reference external" href="https://www.twitter.com">Twitter</a>’s query limits.</p>
-<p>To do a query on twitter use the <cite>–twitter switch</cite>:</p>
+</div>
+<div class="section" id="id2">
+<h4>Twitter<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<p>To do a query on twitter use the <code class="docutils literal notranslate"><span class="pre">--twitter</span></code> switch:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">--</span><span class="n">twitter</span>
 <span class="o">--</span><span class="n">search</span> <span class="n">SEARCH</span> <span class="n">QUERY</span>
-                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">term</span> <span class="n">to</span> <span class="n">search</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">terms</span> <span class="n">to</span> <span class="n">search</span> <span class="k">for</span> <span class="n">old</span> <span class="n">tweets</span>
+<span class="o">--</span><span class="n">search</span><span class="o">-</span><span class="n">new</span> <span class="n">SEARCH</span> <span class="n">QUERY</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">terms</span> <span class="n">to</span> <span class="n">search</span> <span class="k">for</span> <span class="n">new</span> <span class="n">tweets</span>
 <span class="o">--</span><span class="n">timeline</span> <span class="n">USERNAME</span> <span class="n">OR</span> <span class="n">ID</span>
-                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">user</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">its</span> <span class="n">timeline</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">user</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">its</span> <span class="n">past</span> <span class="n">tweets</span>
+<span class="o">--</span><span class="n">timeline</span><span class="o">-</span><span class="n">new</span> <span class="n">USERNAMES</span> <span class="n">OR</span> <span class="n">IDS</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">users</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">their</span> <span class="n">new</span> <span class="n">tweets</span>
 <span class="o">--</span><span class="n">profile</span> <span class="n">USERNAME</span> <span class="n">OR</span> <span class="n">ID</span>
                            <span class="n">Specify</span> <span class="n">the</span> <span class="n">user</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">its</span> <span class="n">profile</span>
 <span class="o">--</span><span class="n">followers</span> <span class="n">USERNAME</span> <span class="n">OR</span> <span class="n">ID</span>
-                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">user</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">its</span> <span class="n">profile</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">user</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">the</span> <span class="n">users</span> <span class="n">that</span> <span class="n">follow</span> <span class="n">him</span><span class="o">/</span><span class="n">her</span>
+<span class="o">--</span><span class="n">friends</span> <span class="n">USERNAME</span> <span class="n">OR</span> <span class="n">ID</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">user</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">the</span> <span class="n">users</span> <span class="n">that</span> <span class="ow">is</span> <span class="n">following</span>
+<span class="o">--</span><span class="n">retweeters</span> <span class="n">TWEET</span> <span class="n">ID</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">tweet</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">the</span> <span class="n">users</span> <span class="n">that</span> <span class="n">retweeted</span> <span class="n">it</span>
+<span class="o">--</span><span class="n">retweeters</span><span class="o">-</span><span class="n">new</span> <span class="n">TWEET</span> <span class="n">IDS</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">tweets</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="n">the</span> <span class="n">new</span> <span class="n">retweeters</span>
+<span class="o">--</span><span class="n">watch</span> <span class="n">USERNAMES</span> <span class="n">OR</span> <span class="n">IDS</span>
+                           <span class="n">Specify</span> <span class="n">the</span> <span class="n">users</span> <span class="n">to</span> <span class="n">retrieve</span> <span class="nb">all</span> <span class="n">their</span> <span class="n">new</span> <span class="n">tweets</span> <span class="ow">and</span> <span class="n">their</span> <span class="n">retweets</span>
 </pre></div>
 </div>
 <p>Run a query with:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$  openglass --config config.json --twitter --search &quot;@twitter&quot;
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$  openglass --config config.json --twitter --search &quot;search query&quot;
 </pre></div>
 </div>
-<p>Openglass is in its first versions still. Please expect bugs.
-If you want to contribute please do get in touch on <a class="reference external" href="https://github.com/hiromipaw/openglass">Github</a>.</p>
+<p>If you want to contribute please do get in touch on <a class="reference external" href="https://github.com/hiromipaw/openglass">Github</a>.</p>
+</div>
+</div>
+<div class="section" id="save-output">
+<h3>Save output<a class="headerlink" href="#save-output" title="Permalink to this headline">¶</a></h3>
+<p>The switch <code class="docutils literal notranslate"><span class="pre">--csv</span></code> saves result to a file called {query_type}_{query}_{timestamp}.csv</p>
+<p>The switch <code class="docutils literal notranslate"><span class="pre">--jsonl</span></code> saves result to a file called {query_type}_{query}_{timestamp}.jsonl</p>
+</div>
+<div class="section" id="timeout">
+<h3>Timeout<a class="headerlink" href="#timeout" title="Permalink to this headline">¶</a></h3>
+<p>The switch <code class="docutils literal notranslate"><span class="pre">--run-for</span></code> specifies for how long should OpenGlass run. Seconds, minutes, hours or days can be specified.</p>
 </div>
 </div>
 </div>
@@ -188,7 +202,7 @@ If you want to contribute please do get in touch on <a class="reference external
       &copy;2021, Silvia Puglisi [Hiro].
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.2</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
