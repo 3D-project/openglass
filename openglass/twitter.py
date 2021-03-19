@@ -5,6 +5,7 @@ import uuid
 import http
 import math
 import random
+import urllib3
 import requests
 import tweepy
 
@@ -27,8 +28,8 @@ class StreamListener(tweepy.StreamListener):
         self.last_rotation = time.time()
         super().__init__()
 
-    def on_status(self, status):
-        self.callback(self, status._json)
+    def on_status(self, entry):
+        self.callback(self, from_tweepy_obj_to_json(entry))
         MINS_15 = 15 * 60
         if time.time() - self.last_rotation > MINS_15:
             self.last_rotation = time.time()
@@ -68,7 +69,7 @@ class Twitter:
             self.current_url = url_used
             try:
                 for entry in self.__limit_handled(cursor.items()):
-                    entry_handler(self, entry._json)
+                    entry_handler(self, from_tweepy_obj_to_json(entry))
                 return
             except RotateKeys:
                 self.__handle_time_limit()
@@ -85,9 +86,19 @@ class Twitter:
                 time.sleep(5)
                 continue
             except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
-                time.sleep(5)
-                continue
+                if 'status code = 429' in str(e):
+                    self.__handle_time_limit()
+                    continue
+                if 'status code = 503' in str(e):
+                    time.sleep(60)
+                    continue
+                elif 'Failed to send request' in str(e):
+                    time.sleep(5)
+                    continue
+                else:
+                    print('got unknown error: {}'.format(str(e)))
+                    time.sleep(5)
+                    continue
 
     def __query_api_with_stream(self, entry_handler, **kwargs):
         while True:
@@ -99,26 +110,39 @@ class Twitter:
             except RotateKeys:
                 self.rotate_apikey()
                 continue
-            except tweepy.error.TweepError as e:
-                print('got unknown error: {}'.format(str(e)))
+            except urllib3.exceptions.ProtocolError:
                 time.sleep(5)
                 continue
+            except tweepy.error.TweepError as e:
+                if 'status code = 429' in str(e):
+                    self.__handle_time_limit()
+                    continue
+                if 'status code = 503' in str(e):
+                    time.sleep(60)
+                    continue
+                elif 'Failed to send request' in str(e):
+                    time.sleep(5)
+                    continue
+                else:
+                    print('got unknown error: {}'.format(str(e)))
+                    time.sleep(5)
+                    continue
 
     def __query_api_raw(self, url_used, api, *args, **kwargs):
         while True:
             self.current_url = url_used
             try:
                 result = api(*args, **kwargs)
-                if type(result) == list:
-                    return [entry._json for entry in result]
-                else:
-                    return result._json
+                return from_tweepy_obj_to_json(result)
             except tweepy.RateLimitError:
                 self.__handle_time_limit()
                 continue
             except tweepy.error.TweepError as e:
                 if 'status code = 429' in str(e):
                     self.__handle_time_limit()
+                    continue
+                if 'status code = 503' in str(e):
+                    time.sleep(60)
                     continue
                 elif 'Failed to send request' in str(e):
                     time.sleep(5)
@@ -137,7 +161,7 @@ class Twitter:
             self.type = 'get_retweeters'
 
         def callback(obj, retweeter):
-            entry_handler(self, {'retweeted_tid': tweet_id, 'retweeter_tid': retweeter})
+            entry_handler(self, {'retweeted_tid': int(tweet_id), 'retweeter_tid': retweeter})
 
         self.__query_api_with_cursor('/statuses/retweeters/ids', callback, self.api.retweeters, id=tweet_id, count=count)
 
@@ -227,7 +251,11 @@ class Twitter:
             self.type = 'get_timeline_new'
         user_ids = self.__name_to_id(user_ids)
 
-        self.__query_api_with_stream(entry_handler, follow=user_ids)
+        def callback(obj, entry):
+            if entry['user']['id_str'] in user_ids:
+                entry_handler(self, entry)
+
+        self.__query_api_with_stream(callback, follow=user_ids)
 
     def search(self, q, entry_handler):
         '''searches for already published tweets that match the search'''
@@ -387,3 +415,14 @@ class Twitter:
             time_expired = now - self.api_in_use['expired_at'][self.current_url]
             time.sleep(15 * 60 - time_expired + 3)
             self.api = self.__authenticate(self.api_in_use)
+
+
+def from_tweepy_obj_to_json(tweepy_obj):
+    if type(tweepy_obj) == list:
+        return [from_tweepy_obj_to_json(entry) for entry in tweepy_obj]
+    elif type(tweepy_obj) == tweepy.models.ResultSet:
+        return [from_tweepy_obj_to_json(entry) for entry in tweepy_obj]
+    elif hasattr(tweepy_obj, '_json'):
+        return tweepy_obj._json
+    else:
+        return tweepy_obj
