@@ -33,17 +33,17 @@ class StreamListener(tweepy.StreamListener):
         MINS_15 = 15 * 60
         if time.time() - self.last_rotation > MINS_15:
             self.last_rotation = time.time()
-            self.rotate_apikey()
+            self.__rotate_apikey()
 
     def on_error(self, status_code):
-        self.rotate_apikey()
+        self.__rotate_apikey()
         return True
 
     def on_timeout(self):
-        self.rotate_apikey()
+        self.__rotate_apikey()
         return True
 
-    def rotate_apikey(self):
+    def __rotate_apikey(self):
         '''raise a RotateKeys exception if there is more than one key'''
         if len(self.twitter.twitter_apis) > 1:
             raise RotateKeys()
@@ -108,7 +108,7 @@ class Twitter:
                 stream.filter(**kwargs)
                 return
             except RotateKeys:
-                self.rotate_apikey()
+                self.__rotate_apikey()
                 continue
             except urllib3.exceptions.ProtocolError:
                 time.sleep(5)
@@ -274,16 +274,6 @@ class Twitter:
 
         self.__query_api_with_stream(entry_handler, track=q.split(' '))
 
-    def __name_to_id(self, id_name_list):
-        id_list = []
-        for id_name in id_name_list:
-            if re.search(r'^\d+$', id_name):
-                id_list.append(id_name)
-            else:
-                profile = self.get_profile(id_name)
-                id_list.append(str(profile['id']))
-        return id_list
-
     def watch(self, user_ids, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
@@ -331,6 +321,16 @@ class Twitter:
 
         self.get_timeline_new(user_ids, callback)
 
+    def __name_to_id(self, id_name_list):
+        id_list = []
+        for id_name in id_name_list:
+            if re.search(r'^\d+$', id_name):
+                id_list.append(id_name)
+            else:
+                profile = self.get_profile(id_name)
+                id_list.append(str(profile['id']))
+        return id_list
+
     def __show_running_time(self, records_amount, count, request_per_window):
         apis_amount = len(self.twitter_apis)
         records_per_round = count * request_per_window * apis_amount
@@ -362,7 +362,7 @@ class Twitter:
         api = tweepy.API(auth)
         return api
 
-    def rotate_apikey(self):
+    def __rotate_apikey(self):
         '''rotates the api key being used'''
         if len(self.twitter_apis) == 1:
             return
