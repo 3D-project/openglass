@@ -12,8 +12,9 @@ import tweepy
 
 class RotateKeys(Exception):
     '''
-    exception used for repacing the cursor or stream and
-    creating it again with new credentials
+    exception raised on api rate limits
+    it is used for repacing the cursor or stream and
+    creating them again with new credentials
     '''
     pass
 
@@ -31,6 +32,7 @@ class StreamListener(tweepy.StreamListener):
     def on_status(self, entry):
         self.callback(self, from_tweepy_obj_to_json(entry))
         MINS_15 = 15 * 60
+        # re-create the stream each 15 minutes to avoid rate limits
         if time.time() - self.last_rotation > MINS_15:
             self.last_rotation = time.time()
             self.__rotate_apikey()
@@ -64,6 +66,7 @@ class Twitter:
         self.type = ''
 
     def __query_api_with_cursor(self, url_used, entry_handler, api, **kwargs):
+        '''queries a tweepy api using cursors handling errors and rate limits'''
         cursor = tweepy.Cursor(api,  **kwargs)
         while True:
             self.current_url = url_used
@@ -101,6 +104,7 @@ class Twitter:
                     continue
 
     def __query_api_with_stream(self, entry_handler, **kwargs):
+        '''queries a tweepy api using streams handling errors and rate limits'''
         while True:
             try:
                 stream_listener = StreamListener(self, entry_handler)
@@ -129,6 +133,7 @@ class Twitter:
                     continue
 
     def __query_api_raw(self, url_used, api, *args, **kwargs):
+        '''queries a tweepy api handling errors and rate limits'''
         while True:
             self.current_url = url_used
             try:
@@ -338,6 +343,7 @@ class Twitter:
         self.get_timeline_new(user_ids, callback)
 
     def __name_to_id(self, id_name_list):
+        '''takes a list of usernames and returns a list of ids'''
         id_list = []
         for id_name in id_name_list:
             if re.search(r'^\d+$', id_name):
@@ -348,6 +354,7 @@ class Twitter:
         return id_list
 
     def __show_running_time(self, records_amount, count, request_per_window):
+        '''used for calculating running time on some queries'''
         apis_amount = len(self.twitter_apis)
         records_per_round = count * request_per_window * apis_amount
         rounds_needed = math.ceil(records_amount / records_per_round)
@@ -379,7 +386,7 @@ class Twitter:
         return api
 
     def __rotate_apikey(self):
-        '''rotates the api key being used'''
+        '''used for streams, rotates the api key being used'''
         if len(self.twitter_apis) == 1:
             return
         for i, twitter_api in enumerate(self.twitter_apis):
@@ -390,7 +397,7 @@ class Twitter:
         raise Exception('API Key not found')
 
     def __limit_handled(self, cursor):
-        '''used by the cursors, handles rate limit'''
+        '''used by cursors, handles exceptions and rate limits'''
         while True:
             try:
                 yield cursor.next()
@@ -434,6 +441,7 @@ class Twitter:
 
 
 def from_tweepy_obj_to_json(tweepy_obj):
+    '''converts a tweepy object to a json object'''
     if type(tweepy_obj) == list:
         return [from_tweepy_obj_to_json(entry) for entry in tweepy_obj]
     elif type(tweepy_obj) == tweepy.models.ResultSet:
