@@ -207,7 +207,11 @@ class Twitter:
         followers_count = profile['followers_count']
         self.__show_running_time(followers_count, count, request_per_window)
 
-        self.__query_api_with_cursor('/followers/list', entry_handler, self.api.followers, id=user, count=count)
+        def callback(obj, entry):
+            entry['follows'] = profile['id']
+            entry_handler(self, entry)
+
+        self.__query_api_with_cursor('/followers/list', callback, self.api.followers, id=user, count=count)
 
     def get_friends(self, user, entry_handler):
         '''returns the users that the user follows'''
@@ -219,9 +223,13 @@ class Twitter:
         profile = self.get_profile(user)
         friends_count = profile['friends_count']
         self.__show_running_time(friends_count, count, request_per_window)
-        user = self.__name_to_id([user])[0]
+        user_id = self.__name_to_id([user])[0]
 
-        self.__query_api_with_cursor('/friends/list', entry_handler, self.api.friends, id=user, count=count)
+        def callback(obj, entry):
+            entry['is_followed_by'] = int(user_id)
+            entry_handler(self, entry)
+
+        self.__query_api_with_cursor('/friends/list', callback, self.api.friends, id=user_id, count=count)
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
@@ -265,14 +273,22 @@ class Twitter:
         if self.type == '':
             self.type = 'search'
 
-        self.__query_api_with_cursor('/search/tweets', entry_handler, self.api.search, q=q, count=count)
+        def callback(obj, entry):
+            entry['search'] = q
+            entry_handler(self, entry)
+
+        self.__query_api_with_cursor('/search/tweets', callback, self.api.search, q=q, count=count)
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
         if self.type == '':
             self.type = 'search_new'
 
-        self.__query_api_with_stream(entry_handler, track=q.split(' '))
+        def callback(obj, entry):
+            entry['search'] = q
+            entry_handler(self, entry)
+
+        self.__query_api_with_stream(callback, track=q.split(' '))
 
     def watch(self, user_ids, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
