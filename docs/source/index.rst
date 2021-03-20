@@ -164,7 +164,9 @@ The switch ``--csv`` saves result to a file called {query_type}_{query}_{timesta
 The switch ``--jsonl`` saves result to a file called {query_type}_{query}_{timestamp}.jsonl
 
 -------------
- Timeout
+ Exit options
 -------------
 
 The switch ``--run-for`` specifies for how long should OpenGlass run. Seconds, minutes, hours or days can be specified.
+
+The switch ``--max-results`` specifies how many results max should openglass obtain before exiting.
