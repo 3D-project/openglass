@@ -5,8 +5,6 @@ import sys
 import json
 import uuid
 import time
-import aiohttp
-import asyncio
 import argparse
 from datetime import date, datetime
 from .twitter import Twitter
