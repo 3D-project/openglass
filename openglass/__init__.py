@@ -18,10 +18,6 @@ def main(cwd=None):
     openglass uses.
     """
 
-    start_time = int(time.time())
-    now = datetime.now()
-    print('started at: {}'.format(now.strftime("%B %d, %H:%M")))
-
     utility = Utility()
 
     if utility.platform == "Darwin":
@@ -129,6 +125,12 @@ def main(cwd=None):
         metavar="Amount of time",
         default=None,
         help="Specify for how long should openglass run. Example 100s, 5h, 3d",
+    )
+    parser.add_argument(
+        "--max-results",
+        metavar="Max number of results",
+        default=None,
+        help="Specify how many results max should openglass obtain",
     )
     parser.add_argument(
         "--telegram",
@@ -243,11 +245,22 @@ def main(cwd=None):
     else:
         args.run_for = None
 
+    if args.max_results:
+        try:
+            args.max_results = int(args.max_results)
+        except ValueError:
+            parser.print_help()
+            return
+
     # Re-load settings, if a custom config was passed in
     if args.config:
         utility.load_settings(args.config)
     else:
         utility.load_settings()
+
+    start_time = int(time.time())
+    now = datetime.now()
+    print('started at: {}'.format(now.strftime("%B %d, %H:%M")))
 
     number_of_results = 0
     filename = ''
@@ -262,6 +275,8 @@ def main(cwd=None):
             entry = standarize_entry(obj, entry)
             store_result(entry, args.csv, args.jsonl, filename, start_time)
             if args.run_for and time.time() - start_time > args.run_for:
+                raise KeyboardInterrupt
+            if args.max_results and number_of_results >= args.max_results:
                 raise KeyboardInterrupt
 
         if args.config:
