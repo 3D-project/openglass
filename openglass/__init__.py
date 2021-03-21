@@ -480,7 +480,6 @@ def standarize_entry(obj, entry):
     entry['og_search_id'] = obj.search_id
     entry['og_timestamp'] = int(time.time())
     entry['og_type'] = obj.type
-    entry['og_endpoint'] = obj.current_url
     return entry
 
 
