@@ -165,8 +165,14 @@ class Twitter:
         if self.type == '':
             self.type = 'get_retweeters'
 
-        def callback(obj, retweeter):
-            entry_handler(self, {'retweeted_tid': int(tweet_id), 'retweeter_tid': retweeter})
+        user_id = self.statuses_lookup([tweet_id])[0]['user']['id']
+
+        def callback(obj, retweeter_uid):
+            entry = {}
+            entry['retweeted_tid'] = int(tweet_id)
+            entry['retweeted_uid'] = user_id
+            entry['retweeter_uid'] = retweeter_uid
+            entry_handler(self, entry)
 
         self.__query_api_with_cursor('/statuses/retweeters/ids', callback, self.api.retweeters, id=tweet_id, count=count)
 
