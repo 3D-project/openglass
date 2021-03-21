@@ -276,6 +276,7 @@ class Twitter:
 
         def callback(obj, entry):
             if entry['user']['id_str'] in user_ids:
+                entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
                 entry_handler(self, entry)
 
         self.__query_api_with_stream(callback, follow=user_ids)
