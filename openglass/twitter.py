@@ -256,7 +256,11 @@ class Twitter:
         if self.type == '':
             self.type = 'get_timeline'
 
-        self.__query_api_with_cursor('/statuses/user_timeline', entry_handler, self.api.user_timeline, id=user, include_rts=True, count=count)
+        def callback(obj, entry):
+            entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
+            entry_handler(self, entry)
+
+        self.__query_api_with_cursor('/statuses/user_timeline', callback, self.api.user_timeline, id=user, include_rts=True, count=count)
 
     def get_timeline_new(self, user_ids, entry_handler):
         '''returns new tweets of a list of users'''
