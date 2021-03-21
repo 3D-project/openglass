@@ -1,11 +1,12 @@
-import argparse
 import os
 import re
 import csv
-from datetime import date, datetime
-import json
 import sys
+import json
+import uuid
 import time
+import argparse
+from datetime import date, datetime
 from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
@@ -16,8 +17,6 @@ def main(cwd=None):
     The main() function implements all of the logic that the command-line version of
     openglass uses.
     """
-
-    start_time = int(time.time())
 
     utility = Utility()
 
@@ -65,25 +64,25 @@ def main(cwd=None):
         "--search",
         metavar="SEARCH QUERY",
         default=None,
-        help="Specify the term to search",
+        help="Specify the terms to search for old tweets",
     )
     parser.add_argument(
         "--search-new",
         metavar="SEARCH QUERY",
         default=None,
-        help="Specify the term to search",
+        help="Specify the terms to search for new tweets",
     )
     parser.add_argument(
         "--timeline",
         metavar="USERNAME OR ID",
         default=None,
-        help="Specify the user to retrieve its timeline",
+        help="Specify the user to retrieve its past tweets",
     )
     parser.add_argument(
         "--timeline-new",
-        metavar="users IDs separated with spaces",
+        metavar="USERNAMES OR IDS",
         default=None,
-        help="Specify the user to retrieve its timeline",
+        help="Specify the users to retrieve their new tweets",
     )
     parser.add_argument(
         "--profile",
@@ -95,19 +94,31 @@ def main(cwd=None):
         "--followers",
         metavar="USERNAME OR ID",
         default=None,
-        help="Specify the user to retrieve its profile",
+        help="Specify the user to retrieve the users that follow him/her",
+    )
+    parser.add_argument(
+        "--friends",
+        metavar="USERNAME OR ID",
+        default=None,
+        help="Specify the user to retrieve the users that is following",
     )
     parser.add_argument(
         "--retweeters",
-        metavar="Tweet ID",
+        metavar="TWEET ID",
         default=None,
-        help="Specify the Tweet id to retrieve the retweeters",
+        help="Specify the tweet to retrieve the users that retweeted it",
     )
     parser.add_argument(
         "--retweeters-new",
-        metavar="Tweet IDs separated with spaces",
+        metavar="TWEET IDS",
         default=None,
-        help="Specify the Tweet ids to retrieve the new retweeters",
+        help="Specify the tweets to retrieve the new retweeters",
+    )
+    parser.add_argument(
+        "--watch",
+        metavar="USERNAMES OR IDS",
+        default=None,
+        help="Specify the users to retrieve all their new tweets and their retweets",
     )
     parser.add_argument(
         "--run-for",
@@ -116,10 +127,10 @@ def main(cwd=None):
         help="Specify for how long should openglass run. Example 100s, 5h, 3d",
     )
     parser.add_argument(
-        "--watch-users",
-        metavar="users NAMEs or IDs separated with spaces",
+        "--max-results",
+        metavar="Max number of results",
         default=None,
-        help="Get all the tweets and their retweets of each watched user",
+        help="Specify how many results max should openglass obtain",
     )
     parser.add_argument(
         "--telegram",
@@ -151,50 +162,16 @@ def main(cwd=None):
 
     args = parser.parse_args()
 
-    version = bool(args.version)
-    settings = bool(args.settings)
-    csv = bool(args.csv)
-    jsonl = bool(args.jsonl)
-    domains = bool(args.domains)
-    twitter = bool(args.twitter)
-    timeline = bool(args.timeline)
-    q_timeline = args.timeline
-    timeline_new = bool(args.timeline_new)
-    q_timeline_new = args.timeline_new
-    search = bool(args.search)
-    q_search = args.search
-    search_new = bool(args.search_new)
-    q_search_new = args.search_new
-    profile = bool(args.profile)
-    q_profile = args.profile
-    followers = bool(args.followers)
-    q_followers = args.followers
-    retweeters = bool(args.retweeters)
-    q_retweeters = args.retweeters
-    retweeters_new = bool(args.retweeters_new)
-    q_retweeters_new = args.retweeters_new
-    watch_users = bool(args.watch_users)
-    q_watch_users = args.watch_users
-    telegram = bool(args.telegram)
-    channel_users = bool(args.channel_users)
-    q_channel_users = args.channel_users
-    channel_links = bool(args.channel_links)
-    channel_messages = bool(args.channel_messages)
-    run_for = bool(args.run_for)
-    q_run_for = args.run_for
-    q_channel_messages = args.channel_messages
-    config_filename = args.config
-
-    if version:
+    if args.version:
         print(
             "Openglass version {}".format(utility.version)
         )
         return
 
-    if settings:
-        if config_filename:
+    if args.settings:
+        if args.config:
             print(
-                "Openglass settings {}".format(utility.print_settings(config_filename))
+                "Openglass settings {}".format(utility.print_settings(args.config))
             )
         else:
             print(
@@ -202,207 +179,258 @@ def main(cwd=None):
             )
         return
 
-    if jsonl and csv:
+    if args.jsonl and args.csv:
         parser.print_help()
         return
 
-    if not telegram and not twitter:
+    if not args.telegram and not args.twitter:
         parser.print_help()
         return
 
-    if telegram and twitter:
+    if args.telegram and args.twitter:
         parser.print_help()
         return
 
     num_actions = 0
-    if twitter:
-        if search:
+    if args.twitter:
+        if args.search:
             num_actions += 1
-        if search_new:
+        if args.search_new:
             num_actions += 1
-        if timeline:
+        if args.timeline:
             num_actions += 1
-        if timeline_new:
+        if args.timeline_new:
             num_actions += 1
-        if profile:
+        if args.profile:
             num_actions += 1
-        if followers:
+        if args.followers:
             num_actions += 1
-        if retweeters:
+        if args.friends:
             num_actions += 1
-        if retweeters_new:
+        if args.retweeters:
             num_actions += 1
-        if watch_users:
+        if args.retweeters_new:
+            num_actions += 1
+        if args.watch:
             num_actions += 1
 
-    if telegram:
-        if channel_users:
+    if args.telegram:
+        if args.channel_users:
             num_actions += 1
-        if channel_messages:
+        if args.channel_messages:
             num_actions += 1
 
     if num_actions != 1:
         parser.print_help()
         return
 
-    if run_for and telegram:
+    if args.run_for and args.telegram:
         parser.print_help()
         return
 
-    if run_for:
-        if re.search(r'\d+[smhd]', q_run_for) is None:
+    if args.run_for:
+        if re.search(r'^\d+[smhd]$', args.run_for) is None:
             parser.print_help()
             return
-        amount = q_run_for[:-1]
-        span = q_run_for[-1]
+        amount = args.run_for[:-1]
+        span = args.run_for[-1]
         if span == 's':
-            q_run_for = int(amount)
+            args.run_for = int(amount)
         if span == 'm':
-            q_run_for = int(amount) * 60
+            args.run_for = int(amount) * 60
         if span == 'h':
-            q_run_for = int(amount) * 60 * 60
+            args.run_for = int(amount) * 60 * 60
         if span == 'd':
-            q_run_for = int(amount) * 24 * 60 * 60
+            args.run_for = int(amount) * 24 * 60 * 60
     else:
-        q_run_for = None
+        args.run_for = None
+
+    if args.max_results:
+        try:
+            args.max_results = int(args.max_results)
+        except ValueError:
+            parser.print_help()
+            return
 
     # Re-load settings, if a custom config was passed in
-    if config_filename:
-        utility.load_settings(config_filename)
+    if args.config:
+        utility.load_settings(args.config)
     else:
         utility.load_settings()
 
-    if twitter:
-        if config_filename:
-            utility.load_settings(config_filename)
+    start_time = int(time.time())
+    now = datetime.now()
+    print('started at: {}'.format(now.strftime("%B %d, %H:%M")))
+
+    number_of_results = 0
+    filename = ''
+
+    if args.twitter:
+
+        def entry_handler(obj, entry):
+            nonlocal number_of_results
+            number_of_results += 1
+            if args.jsonl or args.csv:
+                print('Number of results: {}'.format(number_of_results), end='\r')
+            entry = standarize_entry(obj, entry)
+            store_result(entry, args.csv, args.jsonl, filename, start_time)
+            if args.run_for and time.time() - start_time > args.run_for:
+                raise KeyboardInterrupt
+            if args.max_results and number_of_results >= args.max_results:
+                raise KeyboardInterrupt
+
+        if args.config:
+            utility.load_settings(args.config)
         else:
             utility.load_settings()
 
         t = Twitter(utility.get_setting('twitter_apis'))
-        if search:
+        if args.search:
             print('Press Ctrl-C to exit')
-            res = t.search(q_search, q_run_for)
-            filename = q_search.replace(' ', '_')
-        if search_new:
-            print('Press Ctrl-C to exit')
-            filename = q_search_new.replace(' ', '_')
-            res = []
-
-            def callback(entry):
-                res.append(entry)
-                print('Number of results: {}'.format(len(res)), end='\r')
-                if run_for and time.time() - start_time > q_run_for:
-                    raise KeyboardInterrupt
-
-            print('Number of results: 0', end='\r')
+            filename = 'search_{}'.format(args.search.replace(' ', '_'))
             try:
-                t.search_new(q_search_new, callback)
+                t.search(args.search, entry_handler)
             except KeyboardInterrupt:
                 pass
-        elif timeline:
+        if args.search_new:
             print('Press Ctrl-C to exit')
-            res = t.get_timeline(q_timeline, q_run_for)
-            filename = q_timeline.replace(' ', '_')
-        elif timeline_new:
-            print('Press Ctrl-C to exit')
-            filename = q_timeline_new.replace(' ', '_')
-            res = []
-
-            def callback(entry):
-                res.append(entry)
-                print('Number of results: {}'.format(len(res)), end='\r')
-                if run_for and time.time() - start_time > q_run_for:
-                    raise KeyboardInterrupt
-            print('Number of results: 0', end='\r')
+            filename = 'search_new_{}'.format(args.search_new.replace(' ', '_'))
             try:
-                t.get_timeline_new(q_timeline_new.split(' '), callback)
+                t.search_new(args.search_new, entry_handler)
             except KeyboardInterrupt:
                 pass
-        elif profile:
-            res = t.get_profile(q_profile)
-            filename = q_profile.replace(' ', '_')
-        elif followers:
+        elif args.timeline:
             print('Press Ctrl-C to exit')
-            res = t.get_followers(q_followers, q_run_for)
-            filename = q_followers.replace(' ', '_')
-        elif retweeters:
+            filename = 'timeline_{}'.format(args.timeline.replace(' ', '_'))
+            try:
+                t.get_timeline(args.timeline, entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif args.timeline_new:
             print('Press Ctrl-C to exit')
-            res = t.get_retweeters(q_retweeters, q_run_for)
-            filename = q_retweeters.replace(' ', '_')
-        elif retweeters_new:
+            filename = 'timeline_new_{}'.format(args.timeline_new.replace(' ', '_'))
+            try:
+                t.get_timeline_new(args.timeline_new.split(' '), entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif args.profile:
+            filename = 'profile_{}'.format(args.profile.replace(' ', '_'))
+            profile = t.get_profile(args.profile)
+            profile = standarize_entry(t, profile)
+            number_of_results += 1
+            store_result(profile, args.csv, args.jsonl, filename, start_time)
+        elif args.followers:
             print('Press Ctrl-C to exit')
-            if not run_for:
-                q_run_for = None
-            res = t.get_retweeters_new(q_retweeters_new.split(' '), q_run_for)
-            filename = q_retweeters_new.replace(' ', '_')
-        elif watch_users:
+            filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
+            try:
+                t.get_followers(args.followers, entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif args.friends:
             print('Press Ctrl-C to exit')
-            if not run_for:
-                q_run_for = None
-            res = t.watch_users(q_watch_users, q_run_for)
-            filename = q_watch_users.replace(' ', '_')
+            filename = 'friends_{}'.format(args.friends.replace(' ', '_'))
+            try:
+                t.get_friends(args.friends, entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif args.retweeters:
+            print('Press Ctrl-C to exit')
+            filename = 'retweeters_{}'.format(args.retweeters.replace(' ', '_'))
+            try:
+                t.get_retweeters(args.retweeters, entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif args.retweeters_new:
+            print('Press Ctrl-C to exit')
+            filename = 'retweeters_new_{}'.format(args.retweeters_new.replace(' ', '_'))
+            try:
+                t.get_retweeters_new(args.retweeters_new.split(' '), entry_handler)
+            except KeyboardInterrupt:
+                pass
+        elif args.watch:
+            print('Press Ctrl-C to exit')
+            filename = 'watch_{}'.format(args.watch.replace(' ', '_'))
+            try:
+                t.watch(args.watch.split(' '), entry_handler)
+            except KeyboardInterrupt:
+                pass
 
-    if telegram:
-        if config_filename:
-            utility.load_settings(config_filename)
+    if args.telegram:
+        if args.config:
+            utility.load_settings(args.config)
         else:
             utility.load_settings()
 
         t = Telegram(utility.get_setting('telegram'))
 
-        if channel_users:
-            res = t.get_channel(q_channel_users)
-            filename = q_channel_users.replace(' ', '_')
-        elif channel_messages:
-            res = t.get_messages(q_channel_messages)
-            if search:
-                res = search_dict(res, q_search)
-            if domains:
+        if args.channel_users:
+            res = t.get_channel(args.channel_users)
+            filename = args.channel_users.replace(' ', '_')
+        elif args.channel_messages:
+            res = t.get_messages(args.channel_messages)
+            if args.search:
+                res = search_dict(res, args.search)
+            if args.domains:
                 res = t.parse_domains(res)
-            if channel_links:
+            if args.channel_links:
                 res = t.parse_channel_links(res)
-            filename = q_channel_messages.replace(' ', '_')
+            filename = args.channel_messages.replace(' ', '_')
+        for entry in res:
+            store_result(entry, args.csv, args.jsonl, filename, start_time)
 
-    store_result(res, csv, jsonl, filename, start_time)
-
-
-def store_result(data, csv, jsonl, filename, start_time):
-    '''save the result in as a .csv, .jsonl or print as json'''
-    print('')
-    if len(data) == 0:
+    if number_of_results == 0:
         print('No results')
         return
+
+    if args.jsonl:
+        filename = "{}_{}.jsonl".format(filename, start_time)
+    elif args.csv:
+        filename = "{}_{}.csv".format(filename, start_time)
+    if args.jsonl or args.csv:
+        print('\n[+] created {}'.format(filename))
+
+
+def store_result(entry, csv, jsonl, filename, start_time):
+    '''save the result in as a .csv, .jsonl or print as json'''
     if csv:
-        filename = "{}-{}.csv".format(filename, start_time)
-        save_as_csv(data, filename)
-        print('[+] created {}'.format(filename))
+        filename = "{}_{}.csv".format(filename, start_time)
+        save_as_csv(entry, filename)
     elif jsonl:
-        filename = "{}-{}.jsonl".format(filename, start_time)
-        save_as_jsonl(data, filename)
-        print('[+] created {}'.format(filename))
+        filename = "{}_{}.jsonl".format(filename, start_time)
+        save_as_jsonl(entry, filename)
     else:
-        print(json.dumps(data, indent=4, sort_keys=True))
+        print(json.dumps(entry, indent=4, sort_keys=True))
 
 
-def save_as_csv(res_dict, csvfile):
+def save_as_csv(entry, csvfile):
     """
     Takes a list of dictionaries as input and outputs a CSV file.
     """
-    with open(csvfile, 'w', newline='') as csvfile:
-        fieldnames = res_dict[0].keys()
+    if not os.path.isfile(csvfile):
+        csvfile = open(csvfile, 'w', newline='')
+        fieldnames = entry.keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
                                 extrasaction='ignore', delimiter=';')
         writer.writeheader()
-        for r in res_dict:
-            writer.writerow(r)
+    else:
+        csvfile = open(csvfile, 'a', newline='')
+        fieldnames = entry.keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
+                                extrasaction='ignore', delimiter=';')
+
+    writer.writerow(entry)
+
+    csvfile.close()
 
 
-def save_as_jsonl(res_dict, jsonfile):
+def save_as_jsonl(entry, jsonfile):
     """
-    Takes a list of dictionaries as input and outputs a JSON file.
+    Takes an entry as input and saves it in a JSON L file.
     """
-    with open(jsonfile, 'w') as fh:
-        fh.write('\n'.join([json.dumps(line) for line in res_dict]))
+    # use os module to increase speed
+    fd = os.open(jsonfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+    os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
+    os.close(fd)
 
 
 def search_dict(res_dict, query_value):
@@ -423,6 +451,36 @@ def getpath(nested_dict, value, prepath=()):
             p = getpath(v, value, path)  # recursive call
             if p is not None:
                 return p
+
+
+def delete_unsued_keys(entry):
+    unused_keys = ['id_str', 'profile_background_color', 'profile_link_color', 'profile_sidebar_border_color', 'profile_sidebar_fill_color', 'profile_text_color', 'favorited', 'filter_level']
+    dict_keys = []
+    keys_to_delete = []
+    for key in entry:
+        if key in unused_keys:
+            keys_to_delete.append(key)
+        elif type(entry[key]) == dict:
+            dict_keys.append(key)
+    for k in keys_to_delete:
+        del entry[k]
+    for k in dict_keys:
+        delete_unsued_keys(entry[k])
+
+
+def standarize_entry(obj, entry):
+    '''
+    remove unused entrys and add important fields
+    a unique id 'og_id', a search id 'og_search_id'
+    a timestamp 'og_timestamp' and a type 'og_type'
+    '''
+
+    delete_unsued_keys(entry)
+    entry['og_id'] = str(uuid.uuid4())
+    entry['og_search_id'] = obj.search_id
+    entry['og_timestamp'] = int(time.time())
+    entry['og_type'] = obj.type
+    return entry
 
 
 # some functions to parse json date
