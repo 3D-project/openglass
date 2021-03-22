@@ -217,10 +217,14 @@ class Twitter:
         profile = self.get_profile(user)
         followers_count = profile['followers_count']
         self.__show_running_time(followers_count, count, request_per_window)
+        number_of_followers = 0
 
         def callback(obj, entry):
+            nonlocal number_of_followers
             entry['follows'] = profile['id']
+            entry['follower_number'] = followers_count - number_of_followers
             entry_handler(self, entry)
+            number_of_followers += 1
 
         self.__query_api_with_cursor('/followers/list', callback, self.api.followers, id=user, count=count)
 
