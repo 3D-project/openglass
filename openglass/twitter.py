@@ -1,4 +1,5 @@
 import re
+import sys
 import json
 import time
 import uuid
@@ -211,6 +212,9 @@ class Twitter:
         if self.type == '':
             self.type = 'get_followers'
         profile = self.get_profile(user)
+        if profile['protected']:
+            print('the account {} is not public'.format(profile['screen_name']))
+            return
         followers_count = profile['followers_count']
         self.__show_running_time(followers_count, count, request_per_window)
         number_of_followers = 0
@@ -232,6 +236,9 @@ class Twitter:
         if self.type == '':
             self.type = 'get_friends'
         profile = self.get_profile(user)
+        if profile['protected']:
+            print('the account {} is not public'.format(profile['screen_name']))
+            return
         friends_count = profile['friends_count']
         self.__show_running_time(friends_count, count, request_per_window)
         user_id = self.__name_to_id([user])[0]
@@ -257,6 +264,9 @@ class Twitter:
         count = 200
         request_per_window = 1500
         profile = self.get_profile(user)
+        if profile['protected']:
+            print('the account {} is not public'.format(profile['screen_name']))
+            return
         statuses_count = min(3200, profile['statuses_count'])
         self.__show_running_time(statuses_count, count, request_per_window)
         if self.type == '':
@@ -268,11 +278,17 @@ class Twitter:
 
         self.__query_api_with_cursor('/statuses/user_timeline', callback, self.api.user_timeline, id=user, include_rts=True, count=count)
 
-    def get_timeline_new(self, user_ids, entry_handler):
+    def get_timeline_new(self, users, entry_handler):
         '''returns new tweets of a list of users'''
         if self.type == '':
             self.type = 'get_timeline_new'
-        user_ids = self.__name_to_id(user_ids)
+        user_ids = []
+        for user in users:
+            profile = self.get_profile(user)
+            if profile['protected']:
+                print('the account {} is not public'.format(profile['screen_name']))
+                return
+            user_ids.append(profile['id_str'])
 
         def callback(obj, entry):
             if entry['user']['id_str'] in user_ids:
@@ -306,11 +322,17 @@ class Twitter:
 
         self.__query_api_with_stream(callback, track=q.split(' '))
 
-    def watch(self, user_ids, entry_handler):
+    def watch(self, users, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
             self.type = 'watch'
-        user_ids = self.__name_to_id(user_ids)
+        user_ids = []
+        for user in users:
+            profile = self.get_profile(user)
+            if profile['protected']:
+                print('the account {} is not public'.format(profile['screen_name']))
+                return
+            user_ids.append(profile['id_str'])
         start_time = time.time()
         collected_data = []
         tweets_by_user = {}
