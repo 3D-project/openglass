@@ -81,27 +81,8 @@ class Twitter:
                 cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
-                continue
-            except http.client.IncompleteRead:
-                time.sleep(5)
-                continue
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                if 'status code = 503' in str(e):
-                    time.sleep(60)
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+            except Exception as e:
+                self.__handle_exception(e)
 
     def __query_api_with_stream(self, entry_handler, **kwargs):
         '''queries a tweepy api using streams handling errors and rate limits'''
@@ -113,24 +94,8 @@ class Twitter:
                 return
             except RotateKeys:
                 self.__rotate_apikey()
-                continue
-            except urllib3.exceptions.ProtocolError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                if 'status code = 503' in str(e):
-                    time.sleep(60)
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+            except Exception as e:
+                self.__handle_exception(e)
 
     def __query_api_raw(self, url_used, api, *args, **kwargs):
         '''queries a tweepy api handling errors and rate limits'''
@@ -141,21 +106,52 @@ class Twitter:
                 return from_tweepy_obj_to_json(result)
             except tweepy.RateLimitError:
                 self.__handle_time_limit()
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                if 'status code = 503' in str(e):
-                    time.sleep(60)
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+            except Exception as e:
+                self.__handle_exception(e)
+
+    def __handle_exception(self, e):
+        '''handle many known from tweepy/twitter'''
+        msg = str(e)
+
+        # exception commonly thrown by cursors
+        if type(e) == http.client.IncompleteRead:
+            time.sleep(5)
+        # exception commonly thrown by cursors
+        elif type(e) == requests.exceptions.ConnectionError:
+            time.sleep(5)
+        # exception commonly thrown by strams
+        elif type(e) == urllib3.exceptions.ProtocolError:
+            time.sleep(5)
+        # tweepy failed to send the request
+        elif 'Failed to send request' in msg:
+            time.sleep(5)
+
+        # twitter specific exception
+        # https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
+
+        # 429
+        # Returned when a request cannot be served due to the App's rate limit having been exhausted for the resource.
+        elif 'Too Many Requests' in msg:
+            self.__handle_time_limit()
+        # 503
+        # The Twitter servers are up, but overloaded with requests. Try again later.
+        elif 'Service Unavailable' in msg:
+            time.sleep(60)
+        # 89
+        # Corresponds with HTTP 403. The access token used in the request is incorrect or has expired.
+        elif 'Invalid or expired token' in msg:
+            invalid_api_key = self.api_in_use
+            print('got \'Invalid or expired token\' error')
+            print('is this api key valid?\n{}'.format(json.dumps(invalid_api_key, indent=4, sort_keys=True)))
+            if len(self.twitter_apis) == 1:
+                sys.exit()
+            else:
+                print('removing api key...')
+                self.__rotate_apikey()
+                self.twitter_apis = [key for key in self.twitter_apis if key != invalid_api_key]
+        else:
+            # print('got unknown error: {}'.format(str(e)))
+            raise e
 
     def get_retweeters(self, tweet_id, entry_handler):
         '''returns up to 100 user IDs that have retweeted the tweet'''
