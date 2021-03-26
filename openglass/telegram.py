@@ -1,14 +1,12 @@
-import json
-import telethon.sync
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from telethon.tl.functions.channels import GetParticipantsRequest
 from telethon.tl.types import ChannelParticipantsSearch
 from telethon.tl.functions.messages import (GetHistoryRequest)
-from telethon.tl.types import (
-    PeerChannel
-)
+from telethon.tl.types import PeerChannel
 from urllib.parse import urlparse
 
 

@@ -1,12 +1,14 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import re
-import sys
 import json
 import uuid
 import time
 import glob
 import argparse
-from datetime import date, datetime
+from datetime import datetime
 from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
