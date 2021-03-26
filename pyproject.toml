@@ -3,7 +3,7 @@ name = "openglass"
 version = "0.2.0"
 description = "Openglass is a tool to query various social network and search for different type of information. Openglass is in its first versions still. Please expect bugs. If you want to contribute please do get in touch."
 authors = ["Hiro <hiro@torproject.org>"]
-include = ["version.txt"]
+include = ["openglass/version.txt"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
