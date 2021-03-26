@@ -1,15 +1,16 @@
 import os
 import re
-import csv
 import sys
 import json
 import uuid
 import time
+import glob
 import argparse
 from datetime import date, datetime
 from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
+from .output import store_result
 
 
 def main(cwd=None):
@@ -54,6 +55,11 @@ def main(cwd=None):
         "--jsonl",
         action='store_true',
         help="Stores results as jsonl",
+    )
+    parser.add_argument(
+        "--janus",
+        action='store_true',
+        help="Stores results as csv files for janusgraph import",
     )
     parser.add_argument(
         "--twitter",
@@ -179,7 +185,14 @@ def main(cwd=None):
             )
         return
 
-    if args.jsonl and args.csv:
+    num_output = 0
+    if args.csv:
+        num_output += 1
+    if args.jsonl:
+        num_output += 1
+    if args.janus:
+        num_output += 1
+    if num_output > 1:
         parser.print_help()
         return
 
@@ -273,7 +286,7 @@ def main(cwd=None):
             if args.jsonl or args.csv:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
-            store_result(entry, args.csv, args.jsonl, filename, start_time)
+            store_result(entry, args.csv, args.jsonl, args.janus, filename, start_time)
             if args.run_for and time.time() - start_time > args.run_for:
                 raise KeyboardInterrupt
             if args.max_results and number_of_results >= args.max_results:
@@ -318,7 +331,7 @@ def main(cwd=None):
             profile = t.get_profile(args.profile)
             profile = standarize_entry(t, profile)
             number_of_results += 1
-            store_result(profile, args.csv, args.jsonl, filename, start_time)
+            store_result(profile, args.csv, args.jsonl, args.janus, filename, start_time)
         elif args.followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
@@ -376,61 +389,15 @@ def main(cwd=None):
                 res = t.parse_channel_links(res)
             filename = args.channel_messages.replace(' ', '_')
         for entry in res:
-            store_result(entry, args.csv, args.jsonl, filename, start_time)
+            store_result(entry, args.csv, args.jsonl, args.janus, filename, start_time)
 
     if number_of_results == 0:
         print('No results')
         return
 
-    if args.jsonl:
-        filename = "{}_{}.jsonl".format(filename, start_time)
-    elif args.csv:
-        filename = "{}_{}.csv".format(filename, start_time)
-    if args.jsonl or args.csv:
-        print('\n[+] created {}'.format(filename))
-
-
-def store_result(entry, csv, jsonl, filename, start_time):
-    '''save the result in as a .csv, .jsonl or print as json'''
-    if csv:
-        filename = "{}_{}.csv".format(filename, start_time)
-        save_as_csv(entry, filename)
-    elif jsonl:
-        filename = "{}_{}.jsonl".format(filename, start_time)
-        save_as_jsonl(entry, filename)
-    else:
-        print(json.dumps(entry, indent=4, sort_keys=True))
-
-
-def save_as_csv(entry, csvfile):
-    """
-    Takes a list of dictionaries as input and outputs a CSV file.
-    """
-    if not os.path.isfile(csvfile):
-        csvfile = open(csvfile, 'w', newline='')
-        fieldnames = entry.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                extrasaction='ignore', delimiter=';')
-        writer.writeheader()
-    else:
-        csvfile = open(csvfile, 'a', newline='')
-        fieldnames = entry.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                extrasaction='ignore', delimiter=';')
-
-    writer.writerow(entry)
-
-    csvfile.close()
-
-
-def save_as_jsonl(entry, jsonfile):
-    """
-    Takes an entry as input and saves it in a JSON L file.
-    """
-    # use os module to increase speed
-    fd = os.open(jsonfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
-    os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
-    os.close(fd)
+    files = glob.glob(f'*{start_time}*')
+    for filename in files:
+        print('[+] created {}'.format(filename))
 
 
 def search_dict(res_dict, query_value):
