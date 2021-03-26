@@ -283,7 +283,7 @@ class Twitter:
 
         self.__query_api_with_cursor('/statuses/user_timeline', callback, self.api.user_timeline, id=user, include_rts=True, count=count)
 
-    def get_timeline_new(self, users, entry_handler):
+    def get_timeline_new(self, users, entry_handler, get_all=False):
         '''returns new tweets of a list of users'''
         if self.type == '':
             self.type = 'get_timeline_new'
@@ -296,7 +296,7 @@ class Twitter:
             user_ids.append(profile['id_str'])
 
         def callback(obj, entry):
-            if entry['user']['id_str'] in user_ids:
+            if get_all or entry['user']['id_str'] in user_ids:
                 entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
                 entry_handler(self, entry)
 
@@ -338,8 +338,6 @@ class Twitter:
                 print('the account {} is not public'.format(profile['screen_name']))
                 return
             user_ids.append(profile['id_str'])
-        start_time = time.time()
-        collected_data = []
         tweets_by_user = {}
         for user_id in user_ids:
             tweets_by_user[int(user_id)] = []
@@ -378,7 +376,7 @@ class Twitter:
             else:
                 pass  # somebody responded a tweet
 
-        self.get_timeline_new(user_ids, callback)
+        self.get_timeline_new(user_ids, callback, get_all=True)
 
     def __name_to_id(self, id_name_list):
         '''takes a list of usernames and returns a list of ids'''

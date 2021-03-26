@@ -227,14 +227,15 @@ def timeline(entry, filename):
 
 def watch(entry, filename):
     if entry['type'] == 'retweet':
-        user_retweeter = User(entry['user'])
-        user_retweeted = User(entry['retweeted_status']['user'])
+        user_retweeter = User(entry['tweet']['user'])
         user_retweeter.save_to_file(filename)
+        user_retweeted = User(entry['tweet']['retweeted_status']['user'])
         user_retweeted.save_to_file(filename)
 
-        tweet_retweeted = Tweet(entry['retweeted_status'])
-        # tweet_retweeter = Tweet(entry)
+        tweet_retweeted = Tweet(entry['tweet']['retweeted_status'])
         tweet_retweeted.save_to_file(filename)
+        # tweet_retweeter = Tweet(entry['tweet'])
+        # tweet_retweeter.save_to_file(filename)
 
         retweeted = Retweeted(user_retweeter.id, tweet_retweeted.id)
         retweeted.save_to_file(filename)
