@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import csv
 import json
 
+# global variables used to avoid duplicating entries in the csv files
 users_saved = []
 tweets_saved = []
 
@@ -193,7 +193,8 @@ class Retweeted:
         os.close(fd)
 
 
-def followers(entry, filename):
+def followers_to_csv(entry, filename):
+    '''converts input from the followers function into csv'''
     user = User(entry)
     user.save_to_file(filename)
 
@@ -201,12 +202,14 @@ def followers(entry, filename):
     relation.save_to_file(filename)
 
 
-def profile(entry, filename):
+def profile_to_csv(entry, filename):
+    '''converts input from the profile function into csv'''
     user = User(entry)
     user.write_to_file(filename)
 
 
-def friends(entry, filename):
+def friends_to_csv(entry, filename):
+    '''converts input from the friends function into csv'''
     user = User(entry)
     user.save_to_file(filename)
 
@@ -214,7 +217,8 @@ def friends(entry, filename):
     relation.save_to_file(filename)
 
 
-def timeline(entry, filename):
+def timeline_to_csv(entry, filename):
+    '''converts input from the timeline function into csv'''
     tweet = Tweet(entry)
     tweet.save_to_file(filename)
 
@@ -225,7 +229,8 @@ def timeline(entry, filename):
     relation.save_to_file(filename)
 
 
-def watch(entry, filename):
+def watch_to_csv(entry, filename):
+    '''converts input from the watch function into csv'''
     if entry['type'] == 'retweet':
         user_retweeter = User(entry['tweet']['user'])
         user_retweeter.save_to_file(filename)
@@ -252,7 +257,7 @@ def watch(entry, filename):
         raise Exception(f'unknown entry type \'{entry["type"]}\' for watch')
 
 
-def store_result(entry, csv, jsonl, janus, filename, start_time):
+def store_result(entry, csv, jsonl, filename, start_time):
     '''save the result in as a .csv, .jsonl, janus .csv or print as json'''
     if csv:
         filename = "{}_{}.csv".format(filename, start_time)
@@ -260,59 +265,32 @@ def store_result(entry, csv, jsonl, janus, filename, start_time):
     elif jsonl:
         filename = "{}_{}.jsonl".format(filename, start_time)
         save_as_jsonl(entry, filename)
-    elif janus:
-        filename = "{}_{}.csv".format(filename, start_time)
-        save_as_janus(entry, filename)
     else:
         print(json.dumps(entry, indent=4, sort_keys=True))
 
 
-def save_as_janus(entry, filename):
+def save_as_csv(entry, filename):
+    '''Takes an entry as input and saves it in CSV format, optimized for janusgraph'''
     entry_type = entry['og_type']
     if entry_type == 'get_followers':
-        followers(entry, filename)
+        followers_to_csv(entry, filename)
     elif entry_type == 'get_profile':
-        profile(entry, filename)
+        profile_to_csv(entry, filename)
     elif entry_type == 'get_friends':
-        friends(entry, filename)
+        friends_to_csv(entry, filename)
     elif (entry_type == 'get_timeline' or
           entry_type == 'get_timeline_new' or
           entry_type == 'search' or
           entry_type == 'search_new'):
-        timeline(entry, filename)
+        timeline_to_csv(entry, filename)
     elif entry_type == 'watch':
-        watch(entry, filename)
+        watch_to_csv(entry, filename)
     else:
         raise Exception('save_as_janus: entry type \'{}\' not supported'.format(entry_type))
 
 
-def save_as_csv(entry, csvfile):
-    """
-    Takes a list of dictionaries as input and outputs a CSV file.
-    """
-    if not os.path.isfile(csvfile):
-        csvfile = open(csvfile, 'w', newline='')
-        fieldnames = entry.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                extrasaction='ignore', delimiter=',')
-        writer.writeheader()
-    else:
-        csvfile = open(csvfile, 'a', newline='')
-        fieldnames = entry.keys()
-        writer = csv.DictWriter(
-            csvfile, fieldnames=fieldnames,
-            extrasaction='ignore', delimiter=',')
-
-    writer.writerow(entry)
-
-    csvfile.close()
-
-
 def save_as_jsonl(entry, jsonfile):
-    """
-    Takes an entry as input and saves it in a JSON L file.
-    """
-    # use os module to increase speed
+    '''Takes an entry as input and saves it in a JSON L file.'''
     fd = os.open(jsonfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
     os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
     os.close(fd)

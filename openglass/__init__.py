@@ -59,11 +59,6 @@ def main(cwd=None):
         help="Stores results as jsonl",
     )
     parser.add_argument(
-        "--janus",
-        action='store_true',
-        help="Stores results as csv files for janusgraph import",
-    )
-    parser.add_argument(
         "--twitter",
         action='store_true',
         help="Query the twitter endpoints. Use search to search, timeline for user's statuses, profile for user's profile",
@@ -192,8 +187,6 @@ def main(cwd=None):
         num_output += 1
     if args.jsonl:
         num_output += 1
-    if args.janus:
-        num_output += 1
     if num_output > 1:
         parser.print_help()
         return
@@ -288,7 +281,7 @@ def main(cwd=None):
             if args.jsonl or args.csv or args.janus:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
-            store_result(entry, args.csv, args.jsonl, args.janus, filename, start_time)
+            store_result(entry, args.csv, args.jsonl, filename, start_time)
             if args.run_for and time.time() - start_time > args.run_for:
                 raise KeyboardInterrupt
             if args.max_results and number_of_results >= args.max_results:
@@ -333,7 +326,7 @@ def main(cwd=None):
             profile = t.get_profile(args.profile)
             profile = standarize_entry(t, profile)
             number_of_results += 1
-            store_result(profile, args.csv, args.jsonl, args.janus, filename, start_time)
+            store_result(profile, args.csv, args.jsonl, filename, start_time)
         elif args.followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
@@ -391,7 +384,7 @@ def main(cwd=None):
                 res = t.parse_channel_links(res)
             filename = args.channel_messages.replace(' ', '_')
         for entry in res:
-            store_result(entry, args.csv, args.jsonl, args.janus, filename, start_time)
+            store_result(entry, args.csv, args.jsonl, filename, start_time)
 
     if number_of_results == 0:
         print('No results')
