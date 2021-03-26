@@ -263,6 +263,8 @@ class Twitter:
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/timelines/api-reference/get-statuses-user_timeline
         count = 200
         request_per_window = 1500
+        if self.type == '':
+            self.type = 'get_timeline'
         profile = self.get_profile(user)
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))

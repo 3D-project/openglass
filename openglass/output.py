@@ -3,6 +3,9 @@ import sys
 import csv
 import json
 
+users_saved = []
+tweets_saved = []
+
 
 class User:
     def __init__(self, json_entry):
@@ -46,6 +49,19 @@ class User:
         entry += f'{self.default_profile_image}'
         return entry
 
+    def save_to_file(self, filename):
+        global users_saved
+        filename = f'users_{filename}'
+        if self.id in users_saved:
+            return
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+        users_saved.append(self.id)
+
 
 class Tweet:
     def __init__(self, json_entry):
@@ -73,6 +89,19 @@ class Tweet:
         entry += f'{self.lang}'
         return entry
 
+    def save_to_file(self, filename):
+        global tweets_saved
+        filename = f'tweets_{filename}'
+        if self.id in tweets_saved:
+            return
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+        tweets_saved.append(self.id)
+
 
 class Follows:
     def __init__(self, follower_id, followed_id):
@@ -86,39 +115,138 @@ class Follows:
         entry += f'{self.followed_id}'
         return entry
 
+    def save_to_file(self, filename):
+        filename = f'follows_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+
+
+class Followed:
+    def __init__(self, followed_id, follower_id):
+        self.header = 'followed_id,follower_id'
+        self.followed_id = followed_id
+        self.follower_id = follower_id
+
+    def to_entry(self):
+        entry = ''
+        entry += f'{self.followed_id},'
+        entry += f'{self.follower_id}'
+        return entry
+
+    def save_to_file(self, filename):
+        filename = f'followed_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+
+
+class Tweeted:
+    def __init__(self, user_id, tweet_id):
+        self.header = 'user_id,tweet_id'
+        self.user_id = user_id
+        self.tweet_id = tweet_id
+
+    def to_entry(self):
+        entry = ''
+        entry += f'{self.user_id},'
+        entry += f'{self.tweet_id}'
+        return entry
+
+    def save_to_file(self, filename):
+        filename = f'tweeted_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+
+
+class Retweeted:
+    def __init__(self, user_id, tweet_id):
+        self.header = 'user_id,tweet_id'
+        self.user_id = user_id
+        self.tweet_id = tweet_id
+
+    def to_entry(self):
+        entry = ''
+        entry += f'{self.user_id},'
+        entry += f'{self.tweet_id}'
+        return entry
+
+    def save_to_file(self, filename):
+        filename = f'retweeted_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+
 
 def followers(entry, filename):
-    userfile = f'users_{filename}'
-    store_header = not os.path.isfile(userfile)
-
-    fd = os.open(userfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
     user = User(entry)
-    if store_header:
-        os.write(fd, user.header.encode('utf-8') + b'\n')
-    os.write(fd, user.to_entry().encode('utf-8') + b'\n')
-    os.close(fd)
+    user.save_to_file(filename)
 
-    relationsfile = f'relations_{filename}'
-    store_header = not os.path.isfile(relationsfile)
-
-    fd = os.open(relationsfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
     relation = Follows(user.id, entry['follows'])
-    if store_header:
-        os.write(fd, relation.header.encode('utf-8') + b'\n')
-    os.write(fd, relation.to_entry().encode('utf-8') + b'\n')
-    os.close(fd)
+    relation.save_to_file(filename)
 
 
 def profile(entry, filename):
-    userfile = f'users_{filename}'
-    store_header = not os.path.isfile(userfile)
-
-    fd = os.open(userfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
     user = User(entry)
-    if store_header:
-        os.write(fd, user.header.encode('utf-8') + b'\n')
-    os.write(fd, user.to_entry().encode('utf-8') + b'\n')
-    os.close(fd)
+    user.write_to_file(filename)
+
+
+def friends(entry, filename):
+    user = User(entry)
+    user.save_to_file(filename)
+
+    relation = Followed(user.id, entry['is_followed_by'])
+    relation.save_to_file(filename)
+
+
+def timeline(entry, filename):
+    tweet = Tweet(entry)
+    tweet.save_to_file(filename)
+
+    user = User(entry['user'])
+    user.save_to_file(filename)
+
+    relation = Tweeted(user.id, tweet.id)
+    relation.save_to_file(filename)
+
+
+def watch(entry, filename):
+    if entry['type'] == 'retweet':
+        user_retweeter = User(entry['user'])
+        user_retweeted = User(entry['retweeted_status']['user'])
+        user_retweeter.save_to_file(filename)
+        user_retweeted.save_to_file(filename)
+
+        tweet_retweeted = Tweet(entry['retweeted_status'])
+        # tweet_retweeter = Tweet(entry)
+        tweet_retweeted.save_to_file(filename)
+
+        retweeted = Retweeted(user_retweeter.id, tweet_retweeted.id)
+        retweeted.save_to_file(filename)
+    elif entry['type'] == 'old_tweet' or entry['type'] == 'new_tweet':
+        user = User(entry['tweet']['user'])
+        user.save_to_file(filename)
+
+        tweet = Tweet(entry['tweet'])
+        tweet.save_to_file(filename)
+
+        tweeted = Tweeted(user.id, tweet.id)
+        tweeted.save_to_file(filename)
+    else:
+        raise Exception(f'unknown entry type \'{entry["type"]}\' for watch')
 
 
 def store_result(entry, csv, jsonl, janus, filename, start_time):
@@ -142,6 +270,15 @@ def save_as_janus(entry, filename):
         followers(entry, filename)
     elif entry_type == 'get_profile':
         profile(entry, filename)
+    elif entry_type == 'get_friends':
+        friends(entry, filename)
+    elif (entry_type == 'get_timeline' or
+          entry_type == 'get_timeline_new' or
+          entry_type == 'search' or
+          entry_type == 'search_new'):
+        timeline(entry, filename)
+    elif entry_type == 'watch':
+        watch(entry, filename)
     else:
         raise Exception('save_as_janus: entry type \'{}\' not supported'.format(entry_type))
 
@@ -159,7 +296,9 @@ def save_as_csv(entry, csvfile):
     else:
         csvfile = open(csvfile, 'a', newline='')
         fieldnames = entry.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore', delimiter=',')
+        writer = csv.DictWriter(
+            csvfile, fieldnames=fieldnames,
+            extrasaction='ignore', delimiter=',')
 
     writer.writerow(entry)
 
