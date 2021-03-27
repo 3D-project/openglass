@@ -106,15 +106,17 @@ class Tweet:
 
 
 class Follows:
-    def __init__(self, follower_id, followed_id):
+    def __init__(self, follower_id, followed_id, follower_number):
         self.header = 'follower_id,followed_id'
         self.follower_id = follower_id
         self.followed_id = followed_id
+        self.follower_number = follower_number
 
     def to_entry(self):
         entry = ''
         entry += f'{self.follower_id},'
-        entry += f'{self.followed_id}'
+        entry += f'{self.followed_id},'
+        entry += f'{self.follower_number}'
         return entry
 
     def save_to_file(self, filename):
@@ -198,7 +200,7 @@ def followers_to_csv(entry, filename):
     user = User(entry)
     user.save_to_file(filename)
 
-    relation = Follows(user.id, entry['follows'])
+    relation = Follows(user.id, entry['follows'], entry['follower_number'])
     relation.save_to_file(filename)
 
 
