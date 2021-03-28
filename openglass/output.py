@@ -107,7 +107,7 @@ class Tweet:
 
 class Follows:
     def __init__(self, follower_id, followed_id, follower_number):
-        self.header = 'follower_id,followed_id'
+        self.header = 'follower_id,followed_id,follower_number'
         self.follower_id = follower_id
         self.followed_id = followed_id
         self.follower_number = follower_number
