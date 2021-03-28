@@ -11,7 +11,7 @@ tweets_saved = []
 
 class User:
     def __init__(self, json_entry):
-        self.header = 'id,name,screen_name,location,description,protected,followers_count,friends_count,listed_count,statuses_count,created_at,favourites_count,verified,profile_use_background_image,has_extended_profile,default_profile,default_profile_image'
+        self.header = 'uid,name,screen_name,location,description,protected,followers_count,friends_count,listed_count,statuses_count,created_at,favourites_count,verified,profile_use_background_image,has_extended_profile,default_profile,default_profile_image'
         self.id = json_entry['id']
         self.name = json_entry['name']
         self.screen_name = json_entry['screen_name']
@@ -67,7 +67,7 @@ class User:
 
 class Tweet:
     def __init__(self, json_entry):
-        self.header ='id,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang'
+        self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang'
         self.id = json_entry['id']
         self.text = json_entry['text'].replace('"', '""')
         self.truncated = json_entry.get('truncated', False)
