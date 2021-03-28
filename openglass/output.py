@@ -15,20 +15,20 @@ class User:
         self.id = json_entry['id']
         self.name = json_entry['name']
         self.screen_name = json_entry['screen_name']
-        self.location = json_entry.get('location', None)
+        self.location = json_entry.get('location', '')
         self.description = json_entry.get('description', '').replace('"', '""')
         self.protected = json_entry.get('protected', False)
-        self.followers_count = json_entry.get('followers_count', None)
-        self.friends_count = json_entry.get('friends_count', None)
-        self.listed_count = json_entry.get('listed_count', None)
-        self.statuses_count = json_entry.get('statuses_count', None)
+        self.followers_count = json_entry.get('followers_count', 0)
+        self.friends_count = json_entry.get('friends_count', 0)
+        self.listed_count = json_entry.get('listed_count', 0)
+        self.statuses_count = json_entry.get('statuses_count', 0)
         self.created_at = json_entry.get('created_at', None)
-        self.favourites_count = json_entry.get('favorites_count', None)
+        self.favourites_count = json_entry.get('favorites_count', 0)
         self.verified = json_entry.get('verified', False)
-        self.profile_use_background_image = json_entry.get('profile_use_background_image', None)
-        self.has_extended_profile = json_entry.get('has_extended_profile', None)
-        self.default_profile = json_entry.get('default_profile', None)
-        self.default_profile_image = json_entry.get('default_profile_image', None)
+        self.profile_use_background_image = json_entry.get('profile_use_background_image', False)
+        self.has_extended_profile = json_entry.get('has_extended_profile', False)
+        self.default_profile = json_entry.get('default_profile', False)
+        self.default_profile_image = json_entry.get('default_profile_image', False)
 
     def to_entry(self):
         entry = ''
@@ -207,7 +207,7 @@ def followers_to_csv(entry, filename):
 def profile_to_csv(entry, filename):
     '''converts input from the profile function into csv'''
     user = User(entry)
-    user.write_to_file(filename)
+    user.save_to_file(filename)
 
 
 def friends_to_csv(entry, filename):
