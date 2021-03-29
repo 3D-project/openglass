@@ -226,7 +226,7 @@ class Twitter:
 
         def callback(obj, entry):
             nonlocal number_of_followers
-            entry['follows'] = profile['id']
+            entry['follows'] = profile
             entry['follower_number'] = profile['followers_count'] - number_of_followers
             entry_handler(self, entry)
             number_of_followers += 1
@@ -251,7 +251,7 @@ class Twitter:
         user_id = self.__name_to_id([user])[0]
 
         def callback(obj, entry):
-            entry['is_followed_by'] = int(user_id)
+            entry['is_followed_by'] = profile
             entry_handler(self, entry)
 
         self.__query_api_with_cursor('/friends/list', callback, 'friends', id=user_id, count=count)

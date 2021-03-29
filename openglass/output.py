@@ -197,10 +197,12 @@ class Retweeted:
 
 def followers_to_csv(entry, filename):
     '''converts input from the followers function into csv'''
-    user = User(entry)
-    user.save_to_file(filename)
+    follower = User(entry)
+    follower.save_to_file(filename)
+    followed = User(entry['follows'])
+    followed.save_to_file(filename)
 
-    relation = Follows(user.id, entry['follows'], entry['follower_number'])
+    relation = Follows(follower.id, followed.id, entry['follower_number'])
     relation.save_to_file(filename)
 
 
@@ -212,10 +214,12 @@ def profile_to_csv(entry, filename):
 
 def friends_to_csv(entry, filename):
     '''converts input from the friends function into csv'''
-    user = User(entry)
-    user.save_to_file(filename)
+    followed = User(entry)
+    followed.save_to_file(filename)
+    follower = User(entry['is_followed_by'])
+    follower.save_to_file(filename)
 
-    relation = Followed(user.id, entry['is_followed_by'])
+    relation = Followed(followed.id, follower.id)
     relation.save_to_file(filename)
 
 
