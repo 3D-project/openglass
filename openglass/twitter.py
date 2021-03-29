@@ -207,7 +207,7 @@ class Twitter:
 
         self.get_timeline_new(user_ids, callback)
 
-    def get_followers(self, user, entry_handler):
+    def get_followers(self, user, entry_handler, max_results=None):
         '''returns the followers of a user, ordered from new to old'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-followers-list
         count = 200
@@ -218,20 +218,22 @@ class Twitter:
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))
             return
-        followers_count = profile['followers_count']
+        if max_results is None:
+            max_results = profile['followers_count']
+        followers_count = min(max_results, profile['followers_count'])
         self.__show_running_time(followers_count, count, request_per_window)
         number_of_followers = 0
 
         def callback(obj, entry):
             nonlocal number_of_followers
             entry['follows'] = profile['id']
-            entry['follower_number'] = followers_count - number_of_followers
+            entry['follower_number'] = profile['followers_count'] - number_of_followers
             entry_handler(self, entry)
             number_of_followers += 1
 
         self.__query_api_with_cursor('/followers/list', callback, self.api.followers, id=user, count=count)
 
-    def get_friends(self, user, entry_handler):
+    def get_friends(self, user, entry_handler, max_results=None):
         '''returns the users that the user follows'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-friends-list
         count = 200
@@ -242,7 +244,9 @@ class Twitter:
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))
             return
-        friends_count = profile['friends_count']
+        if max_results is None:
+            max_results = profile['friends_count']
+        friends_count = min(max_results, profile['friends_count'])
         self.__show_running_time(friends_count, count, request_per_window)
         user_id = self.__name_to_id([user])[0]
 
@@ -261,7 +265,7 @@ class Twitter:
 
         return self.__query_api_raw('/users/show', self.api.get_user, id=user)
 
-    def get_timeline(self, user, entry_handler):
+    def get_timeline(self, user, entry_handler, max_results=None):
         '''returns up to 3.200 of a user's most recent tweets'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/timelines/api-reference/get-statuses-user_timeline
         count = 200
@@ -272,7 +276,9 @@ class Twitter:
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))
             return
-        statuses_count = min(3200, profile['statuses_count'])
+        if max_results is None:
+            max_results = profile['statuses_count']
+        statuses_count = min(3200, max_results, profile['statuses_count'])
         self.__show_running_time(statuses_count, count, request_per_window)
         if self.type == '':
             self.type = 'get_timeline'
