@@ -51,9 +51,9 @@ class User:
         entry += f'{self.default_profile_image}'
         return entry
 
-    def save_to_file(self, filename):
+    def save_to_file(self, output_dir, filename):
         global users_saved
-        filename = f'users_{filename}'
+        filename = f'{output_dir}/users_{filename}'
         if self.id in users_saved:
             return
         store_header = not os.path.isfile(filename)
@@ -91,9 +91,9 @@ class Tweet:
         entry += f'{self.lang}'
         return entry
 
-    def save_to_file(self, filename):
+    def save_to_file(self, output_dir, filename):
         global tweets_saved
-        filename = f'tweets_{filename}'
+        filename = f'{output_dir}/tweets_{filename}'
         if self.id in tweets_saved:
             return
         store_header = not os.path.isfile(filename)
@@ -119,8 +119,8 @@ class Follows:
         entry += f'{self.follower_number}'
         return entry
 
-    def save_to_file(self, filename):
-        filename = f'follows_{filename}'
+    def save_to_file(self, output_dir, filename):
+        filename = f'{output_dir}/follows_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
@@ -141,8 +141,8 @@ class Followed:
         entry += f'{self.follower_id}'
         return entry
 
-    def save_to_file(self, filename):
-        filename = f'followed_{filename}'
+    def save_to_file(self, output_dir, filename):
+        filename = f'{output_dir}/followed_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
@@ -163,8 +163,8 @@ class Tweeted:
         entry += f'{self.tweet_id}'
         return entry
 
-    def save_to_file(self, filename):
-        filename = f'tweeted_{filename}'
+    def save_to_file(self, output_dir, filename):
+        filename = f'{output_dir}/tweeted_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
@@ -185,8 +185,8 @@ class Retweeted:
         entry += f'{self.tweet_id}'
         return entry
 
-    def save_to_file(self, filename):
-        filename = f'retweeted_{filename}'
+    def save_to_file(self, output_dir, filename):
+        filename = f'{output_dir}/retweeted_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
@@ -195,109 +195,109 @@ class Retweeted:
         os.close(fd)
 
 
-def followers_to_csv(entry, filename):
+def followers_to_csv(entry, output_dir, filename):
     '''converts input from the followers function into csv'''
     followed = User(entry['follows'])
-    followed.save_to_file(filename)
+    followed.save_to_file(output_dir, filename)
     follower = User(entry)
-    follower.save_to_file(filename)
+    follower.save_to_file(output_dir, filename)
 
     relation = Follows(follower.id, followed.id, entry['follower_number'])
-    relation.save_to_file(filename)
+    relation.save_to_file(output_dir, filename)
 
 
-def profile_to_csv(entry, filename):
+def profile_to_csv(entry, output_dir, filename):
     '''converts input from the profile function into csv'''
     user = User(entry)
-    user.save_to_file(filename)
+    user.save_to_file(output_dir, filename)
 
 
-def friends_to_csv(entry, filename):
+def friends_to_csv(entry, output_dir, filename):
     '''converts input from the friends function into csv'''
     follower = User(entry['is_followed_by'])
-    follower.save_to_file(filename)
+    follower.save_to_file(output_dir, filename)
     followed = User(entry)
-    followed.save_to_file(filename)
+    followed.save_to_file(output_dir, filename)
 
     relation = Followed(followed.id, follower.id)
-    relation.save_to_file(filename)
+    relation.save_to_file(output_dir, filename)
 
 
-def timeline_to_csv(entry, filename):
+def timeline_to_csv(entry, output_dir, filename):
     '''converts input from the timeline function into csv'''
     tweet = Tweet(entry)
-    tweet.save_to_file(filename)
+    tweet.save_to_file(output_dir, filename)
 
     user = User(entry['user'])
-    user.save_to_file(filename)
+    user.save_to_file(output_dir, filename)
 
     relation = Tweeted(user.id, tweet.id)
-    relation.save_to_file(filename)
+    relation.save_to_file(output_dir, filename)
 
 
-def watch_to_csv(entry, filename):
+def watch_to_csv(entry, output_dir, filename):
     '''converts input from the watch function into csv'''
     if entry['type'] == 'retweet':
         user_retweeter = User(entry['tweet']['user'])
-        user_retweeter.save_to_file(filename)
+        user_retweeter.save_to_file(output_dir, filename)
         user_retweeted = User(entry['tweet']['retweeted_status']['user'])
-        user_retweeted.save_to_file(filename)
+        user_retweeted.save_to_file(output_dir, filename)
 
         tweet_retweeted = Tweet(entry['tweet']['retweeted_status'])
-        tweet_retweeted.save_to_file(filename)
+        tweet_retweeted.save_to_file(output_dir, filename)
         # tweet_retweeter = Tweet(entry['tweet'])
-        # tweet_retweeter.save_to_file(filename)
+        # tweet_retweeter.save_to_file(output_dir, filename)
 
         retweeted = Retweeted(user_retweeter.id, tweet_retweeted.id)
-        retweeted.save_to_file(filename)
+        retweeted.save_to_file(output_dir, filename)
     elif entry['type'] == 'old_tweet' or entry['type'] == 'new_tweet':
         user = User(entry['tweet']['user'])
-        user.save_to_file(filename)
+        user.save_to_file(output_dir, filename)
 
         tweet = Tweet(entry['tweet'])
-        tweet.save_to_file(filename)
+        tweet.save_to_file(output_dir, filename)
 
         tweeted = Tweeted(user.id, tweet.id)
-        tweeted.save_to_file(filename)
+        tweeted.save_to_file(output_dir, filename)
     else:
         raise Exception(f'unknown entry type \'{entry["type"]}\' for watch')
 
 
-def store_result(entry, csv, jsonl, filename, start_time):
+def store_result(output_dir, entry, csv, jsonl, filename, start_time):
     '''save the result in as a .csv, .jsonl, janus .csv or print as json'''
     if csv:
-        filename = "{}_{}.csv".format(filename, start_time)
-        save_as_csv(entry, filename)
+        filename = f'{filename}_{start_time}.csv'
+        save_as_csv(entry, output_dir, filename)
     elif jsonl:
-        filename = "{}_{}.jsonl".format(filename, start_time)
-        save_as_jsonl(entry, filename)
+        filename = f'{filename}_{start_time}.jsonl'
+        save_as_jsonl(entry, output_dir, filename)
     else:
         print(json.dumps(entry, indent=4, sort_keys=True))
 
 
-def save_as_csv(entry, filename):
+def save_as_csv(entry, output_dir, filename):
     '''Takes an entry as input and saves it in CSV format, optimized for janusgraph'''
-    entry_type = entry['og_type']
+    entry_type = entry.get('og_type', None)
     if entry_type == 'get_followers':
-        followers_to_csv(entry, filename)
+        followers_to_csv(entry, output_dir, filename)
     elif entry_type == 'get_profile':
-        profile_to_csv(entry, filename)
+        profile_to_csv(entry, output_dir, filename)
     elif entry_type == 'get_friends':
-        friends_to_csv(entry, filename)
+        friends_to_csv(entry, output_dir, filename)
     elif (entry_type == 'get_timeline' or
           entry_type == 'get_timeline_new' or
           entry_type == 'search' or
           entry_type == 'search_new'):
-        timeline_to_csv(entry, filename)
+        timeline_to_csv(entry, output_dir, filename)
     elif entry_type == 'watch':
-        watch_to_csv(entry, filename)
+        watch_to_csv(entry, output_dir, filename)
     else:
         raise Exception('save_as_janus: entry type \'{}\' not supported'.format(entry_type))
 
 
-def save_as_jsonl(entry, jsonfile):
+def save_as_jsonl(entry, output_dir, jsonfile):
     '''Takes an entry as input and saves it in a JSON L file.'''
-    fd = os.open(jsonfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+    fd = os.open(f'{output_dir}/{jsonfile}', os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
     os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
     os.close(fd)
 
