@@ -311,7 +311,7 @@ def main(cwd=None):
             print('Press Ctrl-C to exit')
             filename = 'timeline_{}'.format(args.timeline.replace(' ', '_'))
             try:
-                t.get_timeline(args.timeline, entry_handler)
+                t.get_timeline(args.timeline, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
         elif args.timeline_new:
@@ -331,14 +331,14 @@ def main(cwd=None):
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
             try:
-                t.get_followers(args.followers, entry_handler)
+                t.get_followers(args.followers, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
         elif args.friends:
             print('Press Ctrl-C to exit')
             filename = 'friends_{}'.format(args.friends.replace(' ', '_'))
             try:
-                t.get_friends(args.friends, entry_handler)
+                t.get_friends(args.friends, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
         elif args.retweeters:
