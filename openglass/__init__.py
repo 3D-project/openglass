@@ -278,7 +278,7 @@ def main(cwd=None):
         def entry_handler(obj, entry):
             nonlocal number_of_results
             number_of_results += 1
-            if args.jsonl or args.csv or args.janus:
+            if args.jsonl or args.csv:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
             store_result(entry, args.csv, args.jsonl, filename, start_time)
