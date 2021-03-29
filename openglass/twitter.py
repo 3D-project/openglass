@@ -69,9 +69,9 @@ class Twitter:
         self.search_id = str(uuid.uuid4())
         self.type = ''
 
-    def __query_api_with_cursor(self, url_used, entry_handler, api, **kwargs):
+    def __query_api_with_cursor(self, url_used, entry_handler, apiname, **kwargs):
         '''queries a tweepy api using cursors handling errors and rate limits'''
-        cursor = tweepy.Cursor(api,  **kwargs)
+        cursor = tweepy.Cursor(getattr(self.api, apiname),  **kwargs)
         while True:
             self.current_url = url_used
             try:
@@ -79,9 +79,9 @@ class Twitter:
                     entry_handler(self, from_tweepy_obj_to_json(entry))
                 return
             except RotateKeys:
-                self.__handle_time_limit()
+                self.__handle_rate_limit()
                 old_cursor = cursor
-                cursor = tweepy.Cursor(api, **kwargs)
+                cursor = tweepy.Cursor(getattr(self.api, apiname), **kwargs)
                 cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
@@ -109,7 +109,7 @@ class Twitter:
                 result = api(*args, **kwargs)
                 return from_tweepy_obj_to_json(result)
             except tweepy.RateLimitError:
-                self.__handle_time_limit()
+                self.__handle_rate_limit()
             except Exception as e:
                 self.__handle_exception(e)
 
@@ -136,7 +136,7 @@ class Twitter:
         # 429
         # Returned when a request cannot be served due to the App's rate limit having been exhausted for the resource.
         elif 'Too Many Requests' in msg:
-            self.__handle_time_limit()
+            self.__handle_rate_limit()
         # 503
         # The Twitter servers are up, but overloaded with requests. Try again later.
         elif 'Service Unavailable' in msg:
@@ -174,7 +174,7 @@ class Twitter:
             entry['retweeter_uid'] = retweeter_uid
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/statuses/retweeters/ids', callback, self.api.retweeters, id=tweet_id, count=count)
+        self.__query_api_with_cursor('/statuses/retweeters/ids', callback, 'retweeters', id=tweet_id, count=count)
 
     def statuses_lookup(self, tweet_ids):
         '''returns detail data from a list of tweet ids'''
@@ -231,7 +231,7 @@ class Twitter:
             entry_handler(self, entry)
             number_of_followers += 1
 
-        self.__query_api_with_cursor('/followers/list', callback, self.api.followers, id=user, count=count)
+        self.__query_api_with_cursor('/followers/list', callback, 'followers', id=user, count=count)
 
     def get_friends(self, user, entry_handler, max_results=None):
         '''returns the users that the user follows'''
@@ -254,7 +254,7 @@ class Twitter:
             entry['is_followed_by'] = int(user_id)
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/friends/list', callback, self.api.friends, id=user_id, count=count)
+        self.__query_api_with_cursor('/friends/list', callback, 'friends', id=user_id, count=count)
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
@@ -287,7 +287,7 @@ class Twitter:
             entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/statuses/user_timeline', callback, self.api.user_timeline, id=user, include_rts=True, count=count)
+        self.__query_api_with_cursor('/statuses/user_timeline', callback, 'user_timeline', id=user, include_rts=True, count=count)
 
     def get_timeline_new(self, users, entry_handler, get_all=False):
         '''returns new tweets of a list of users'''
@@ -320,7 +320,7 @@ class Twitter:
             entry['search'] = q
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/search/tweets', callback, self.api.search, q=q, count=count)
+        self.__query_api_with_cursor('/search/tweets', callback, 'search', q=q, count=count)
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
@@ -458,7 +458,7 @@ class Twitter:
                     time.sleep(5)
                     continue
 
-    def __handle_time_limit(self):
+    def __handle_rate_limit(self):
         '''
         changes the API key being used based on their expiration status
         if all keys are expired, it waits the smallest amount of time possible
