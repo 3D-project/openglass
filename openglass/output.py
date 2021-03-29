@@ -13,7 +13,7 @@ class User:
     def __init__(self, json_entry):
         self.header = 'uid,name,screen_name,location,description,protected,followers_count,friends_count,listed_count,statuses_count,created_at,favourites_count,verified,profile_use_background_image,has_extended_profile,default_profile,default_profile_image'
         self.id = json_entry['id']
-        self.name = json_entry['name']
+        self.name = json_entry['name'].replace('"', '""')
         self.screen_name = json_entry['screen_name']
         self.location = json_entry.get('location', '')
         self.description = json_entry.get('description', '').replace('"', '""')
@@ -33,7 +33,7 @@ class User:
     def to_entry(self):
         entry = ''
         entry += f'{self.id},'
-        entry += f'{self.name},'
+        entry += f'"{self.name}",'
         entry += f'{self.screen_name},'
         entry += f'"{self.location}",'
         entry += f'"{self.description}",'
