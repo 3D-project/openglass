@@ -217,7 +217,7 @@ class Replied:
         return entry
 
     def save_to_file(self, output_dir, filename):
-        filename = f'{output_dir}/replied_{filename}'
+        filename = f'{output_dir}/responds_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
