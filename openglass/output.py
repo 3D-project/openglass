@@ -94,7 +94,7 @@ class Tweet:
             self.app = match.group(1)
         else:
             self.app = json_entry['source']
-        self.app = self.app.replce('"', '""')
+        self.app = self.app.replace('"', '""')
         urls = json_entry['entities']['urls']
         self.media_urls = '-'.join([url['expanded_url'] for url in urls])
         self.save_to_file(output_dir, filename)
