@@ -101,10 +101,11 @@ class Twitter:
             except Exception as e:
                 self.__handle_exception(e)
 
-    def __query_api_raw(self, url_used, api, *args, **kwargs):
+    def __query_api_raw(self, url_used, apiname, *args, **kwargs):
         '''queries a tweepy api handling errors and rate limits'''
         while True:
             self.current_url = url_used
+            api = getattr(self.api, apiname)
             try:
                 result = api(*args, **kwargs)
                 return from_tweepy_obj_to_json(result)
@@ -188,7 +189,7 @@ class Twitter:
         while len(tweet_ids) > 0:
             batch = tweet_ids[:max_per_request]
             tweet_ids = tweet_ids[max_per_request:]
-            tweets_data += self.__query_api_raw('/statuses/lookup', self.api.statuses_lookup, batch)
+            tweets_data += self.__query_api_raw('/statuses/lookup', 'statuses_lookup', batch)
         return tweets_data
 
     def get_retweeters_new(self, tweet_ids, entry_handler):
@@ -263,7 +264,13 @@ class Twitter:
         if self.type == '':
             self.type = 'get_profile'
 
-        return self.__query_api_raw('/users/show', self.api.get_user, id=user)
+        try:
+            profile = self.__query_api_raw('/users/show', 'get_user', id=user)
+        except tweepy.error.TweepError as e:
+            if 'User not found' in str(e):
+                sys.exit(f'the user \'{user}\' was not found')
+            raise e
+        return profile
 
     def get_timeline(self, user, entry_handler, max_results=None):
         '''returns up to 3.200 of a user's most recent tweets'''
