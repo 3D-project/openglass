@@ -174,19 +174,41 @@ class Tweeted:
 
 
 class Retweeted:
-    def __init__(self, user_id, tweet_id):
-        self.header = 'user_id,tweet_id'
-        self.user_id = user_id
-        self.tweet_id = tweet_id
+    def __init__(self, t_retweeter_id, t_retweeted_id):
+        self.header = 't_retweeter_id,t_retweeted_id'
+        self.t_retweeter_id = t_retweeted_id
+        self.t_retweeted_id = t_retweeted_id
 
     def to_entry(self):
         entry = ''
-        entry += f'{self.user_id},'
-        entry += f'{self.tweet_id}'
+        entry += f'{self.t_retweeter_id},'
+        entry += f'{self.t_retweeted_id}'
         return entry
 
     def save_to_file(self, output_dir, filename):
         filename = f'{output_dir}/retweeted_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+
+
+class Replied:
+    def __init__(self, t_replier_id, t_replied_id):
+        self.header = 't_replier_id,t_replied_id'
+        self.t_replier_id = t_replier_id
+        self.t_replied_id = t_replied_id
+
+    def to_entry(self):
+        entry = ''
+        entry += f'{self.t_replier_id},'
+        entry += f'{self.t_replied_id}'
+        return entry
+
+    def save_to_file(self, output_dir, filename):
+        filename = f'{output_dir}/replied_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
@@ -235,22 +257,64 @@ def timeline_to_csv(entry, output_dir, filename):
     relation.save_to_file(output_dir, filename)
 
 
-def watch_to_csv(entry, output_dir, filename):
+def stream_to_csv(entry, output_dir, filename):
     '''converts input from the watch function into csv'''
+    t = entry['tweet']
     if entry['type'] == 'retweet':
-        user_retweeter = User(entry['tweet']['user'])
+        user_retweeter = User(t['user'])
         user_retweeter.save_to_file(output_dir, filename)
-        user_retweeted = User(entry['tweet']['retweeted_status']['user'])
+        user_retweeted = User(t['retweeted_status']['user'])
         user_retweeted.save_to_file(output_dir, filename)
 
-        tweet_retweeted = Tweet(entry['tweet']['retweeted_status'])
+        tweet_retweeted = Tweet(t['retweeted_status'])
         tweet_retweeted.save_to_file(output_dir, filename)
-        # tweet_retweeter = Tweet(entry['tweet'])
-        # tweet_retweeter.save_to_file(output_dir, filename)
+        tweet_retweeter = Tweet(t)
+        tweet_retweeter.save_to_file(output_dir, filename)
 
-        retweeted = Retweeted(user_retweeter.id, tweet_retweeted.id)
+        tweeted = Tweeted(user_retweeted.id, tweet_retweeted.id)
+        tweeted.save_to_file(output_dir, filename)
+        tweeted = Tweeted(user_retweeter.id, tweet_retweeter.id)
+        tweeted.save_to_file(output_dir, filename)
+
+        retweeted = Retweeted(tweet_retweeter.id, tweet_retweeted.id)
         retweeted.save_to_file(output_dir, filename)
-    elif entry['type'] == 'old_tweet' or entry['type'] == 'new_tweet':
+    elif entry['type'] == 'reply':
+        user_replier = User(t['user'])
+        user_replier.save_to_file(output_dir, filename)
+        user_replied = User(entry['replied_to']['user'])
+        user_replied.save_to_file(output_dir, filename)
+
+        tweet_replier = Tweet(t)
+        tweet_replier.save_to_file(output_dir, filename)
+        tweet_replied = Tweet(entry['replied_to'])
+        tweet_replied.save_to_file(output_dir, filename)
+
+        relation = Tweeted(user_replier.id, tweet_replier.id)
+        relation.save_to_file(output_dir, filename)
+        relation = Tweeted(user_replied.id, tweet_replied.id)
+        relation.save_to_file(output_dir, filename)
+
+        relation = Replied(tweet_replier.id, tweet_replied.id)
+        relation.save_to_file(output_dir, filename)
+    elif entry['type'] == 'quote':
+        user_quoter = User(t['user'])
+        user_quoter.save_to_file(output_dir, filename)
+        user_quoted = User(t['quoted_status']['user'])
+        user_quoted.save_to_file(output_dir, filename)
+
+        tweet_quoter = Tweet(t)
+        tweet_quoter.save_to_file(output_dir, filename)
+        tweet_quoted = Tweet(t['quoted_status'])
+        tweet_quoted.save_to_file(output_dir, filename)
+
+        relation = Tweeted(user_quoter.id, tweet_quoter.id)
+        relation.save_to_file(output_dir, filename)
+        relation = Tweeted(user_quoted.id, tweet_quoted.id)
+        relation.save_to_file(output_dir, filename)
+
+        retweeted = Retweeted(tweet_quoter.id, tweet_quoted.id)
+        retweeted.save_to_file(output_dir, filename)
+    elif entry['type'] == 'tweet':
         user = User(entry['tweet']['user'])
         user.save_to_file(output_dir, filename)
 
@@ -286,11 +350,10 @@ def save_as_csv(entry, output_dir, filename):
         friends_to_csv(entry, output_dir, filename)
     elif (entry_type == 'get_timeline' or
           entry_type == 'get_timeline_new' or
-          entry_type == 'search' or
-          entry_type == 'search_new'):
+          entry_type == 'search'):
         timeline_to_csv(entry, output_dir, filename)
-    elif entry_type == 'watch':
-        watch_to_csv(entry, output_dir, filename)
+    elif entry_type == 'watch' or entry_type == 'search_new':
+        stream_to_csv(entry, output_dir, filename)
     else:
         raise Exception('save_as_janus: entry type \'{}\' not supported'.format(entry_type))
 

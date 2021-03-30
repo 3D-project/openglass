@@ -322,14 +322,40 @@ class Twitter:
 
         self.__query_api_with_cursor('/search/tweets', callback, 'search', q=q, count=count)
 
+    def stream_callback(self, obj, tweet, entry_handler):
+        is_retweet = 'retweeted_status' in tweet
+        is_reply = tweet['in_reply_to_status_id_str'] is not None
+        is_quote = 'quoted_status' in tweet
+
+        if is_retweet:
+            entry = {}
+            entry['type'] = 'retweet'
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
+        elif is_reply:
+            entry = {}
+            entry['type'] = 'reply'
+            entry['tweet'] = tweet
+            entry['replied_to'] = self.statuses_lookup([tweet['in_reply_to_status_id_str']])[0]
+            entry_handler(self, entry)
+        elif is_quote:
+            entry = {}
+            entry['type'] = 'quote'
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
+        else:
+            entry = {}
+            entry['type'] = 'tweet'
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
+
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
         if self.type == '':
             self.type = 'search_new'
 
         def callback(obj, entry):
-            entry['search'] = q
-            entry_handler(self, entry)
+            self.stream_callback(obj, entry, entry_handler)
 
         self.__query_api_with_stream(callback, track=q.split(' '))
 
@@ -344,43 +370,9 @@ class Twitter:
                 print('the account {} is not public'.format(profile['screen_name']))
                 return
             user_ids.append(profile['id_str'])
-        tweets_by_user = {}
-        for user_id in user_ids:
-            tweets_by_user[int(user_id)] = []
 
-        def callback(obj, tweet):
-            is_own_tweet = str(tweet['user']['id']) in user_ids
-            is_retweet = 'retweeted_status' in tweet
-            if is_retweet and tweet['retweeted_status']['user']['id_str'] not in user_ids:
-                return  # the user was probably tagged
-            if not is_own_tweet and is_retweet:
-                entry = {}
-                entry['type'] = 'retweet'
-                entry['retweeted_uid'] = tweet['retweeted_status']['user']['id']
-                entry['retweeter_uid'] = tweet['user']['id']
-                entry['retweeted_tid'] = tweet['retweeted_status']['id']
-                entry['retweeter_tid'] = tweet['id']
-                entry['tweet'] = tweet
-                entry_handler(self, entry)
-
-                if tweet['retweeted_status']['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
-                    entry = {}
-                    entry['type'] = 'old_tweet'
-                    entry['uid'] = tweet['retweeted_status']['user']['id']
-                    entry['tid'] = tweet['retweeted_status']['id']
-                    entry['tweet'] = self.statuses_lookup([tweet['retweeted_status']['id']])[0]
-                    entry_handler(self, entry)
-                    tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet['retweeted_status']['id'])
-            elif is_own_tweet:
-                entry = {}
-                entry['type'] = 'new_tweet'
-                entry['uid'] = tweet['user']['id']
-                entry['tid'] = tweet['id']
-                entry['tweet'] = tweet
-                entry_handler(self, entry)
-                tweets_by_user[tweet['user']['id']].append(tweet['id'])
-            else:
-                pass  # somebody responded a tweet
+        def callback(obj, entry):
+            self.stream_callback(obj, entry, entry_handler)
 
         self.get_timeline_new(user_ids, callback, get_all=True)
 
