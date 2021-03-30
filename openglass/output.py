@@ -16,7 +16,10 @@ class User:
         self.name = json_entry['name'].replace('"', '""')
         self.screen_name = json_entry['screen_name']
         self.location = json_entry.get('location', '')
-        self.description = json_entry.get('description', '').replace('"', '""')
+        self.description = json_entry.get('description', None)
+        if self.description is None:
+            self.description = ''
+        self.description = self.description.replace('"', '""')
         self.protected = json_entry.get('protected', False)
         self.followers_count = json_entry.get('followers_count', 0)
         self.friends_count = json_entry.get('friends_count', 0)
