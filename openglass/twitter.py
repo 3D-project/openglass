@@ -216,6 +216,12 @@ class Twitter:
         if self.type == '':
             self.type = 'get_followers'
         profile = self.get_profile(user)
+        if profile['name'] == 'SUSPENDED':
+            print('the account {} has been suspended.'.format(user))
+            return
+        if profile['name'] == 'NOTFOUND':
+            print('the account {} could not be found.'.format(user))
+            return
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))
             return
@@ -242,6 +248,12 @@ class Twitter:
         if self.type == '':
             self.type = 'get_friends'
         profile = self.get_profile(user)
+        if profile['name'] == 'SUSPENDED':
+            print('the account {} has been suspended.'.format(user))
+            return
+        if profile['name'] == 'NOTFOUND':
+            print('the account {} could not be found.'.format(user))
+            return
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))
             return
@@ -249,7 +261,7 @@ class Twitter:
             max_results = profile['friends_count']
         friends_count = min(max_results, profile['friends_count'])
         self.__show_running_time(friends_count, count, request_per_window)
-        user_id = self.__name_to_id([user])[0]
+        user_id = str(profile['id'])
 
         def callback(obj, entry):
             entry['is_followed_by'] = profile
@@ -268,8 +280,17 @@ class Twitter:
             profile = self.__query_api_raw('/users/show', 'get_user', id=user)
         except tweepy.error.TweepError as e:
             if 'User not found' in str(e):
-                sys.exit(f'the user \'{user}\' was not found')
-            raise e
+                profile = {}
+                profile['id'] = user
+                profile['name'] = 'NOTFOUND'
+                profile['screen_name'] = 'NOTFOUND'
+            elif 'User has been suspended' in str(e):
+                profile = {}
+                profile['id'] = user
+                profile['name'] = 'SUSPENDED'
+                profile['screen_name'] = 'SUSPENDED'
+            else:
+                raise e
         return profile
 
     def get_timeline(self, user, entry_handler, max_results=None):
@@ -280,6 +301,12 @@ class Twitter:
         if self.type == '':
             self.type = 'get_timeline'
         profile = self.get_profile(user)
+        if profile['name'] == 'SUSPENDED':
+            print('the account {} has been suspended.'.format(user))
+            return
+        if profile['name'] == 'NOTFOUND':
+            print('the account {} could not be found.'.format(user))
+            return
         if profile['protected']:
             print('the account {} is not public'.format(profile['screen_name']))
             return
@@ -303,6 +330,12 @@ class Twitter:
         user_ids = []
         for user in users:
             profile = self.get_profile(user)
+            if profile['name'] == 'SUSPENDED':
+                print('the account {} has been suspended.'.format(user))
+                return
+            if profile['name'] == 'NOTFOUND':
+                print('the account {} could not be found.'.format(user))
+                return
             if profile['protected']:
                 print('the account {} is not public'.format(profile['screen_name']))
                 return
@@ -337,6 +370,12 @@ class Twitter:
             user_ids = []
             for user in users:
                 profile = self.get_profile(user)
+                if profile['name'] == 'SUSPENDED':
+                    print('the account {} has been suspended.'.format(user))
+                    return
+                if profile['name'] == 'NOTFOUND':
+                    print('the account {} could not be found.'.format(user))
+                    return
                 if profile['protected']:
                     print('the account {} is not public'.format(profile['screen_name']))
                     return
@@ -362,23 +401,13 @@ class Twitter:
             entities = tweet.get('entities', {})
             user_mentions = entities.get('user_mentions', [])
             profiles = [self.get_profile(um['id_str']) for um in user_mentions]
+            profiles = [p for p in profiles if p['name'] not in ['SUSPENDED', 'NOTFOUND']]
             tweet['entities']['user_mentions'] = profiles
 
             entry['tweet'] = tweet
             entry_handler(self, entry)
 
         self.__query_api_with_stream(callback, follow=users, track=search)
-
-    def __name_to_id(self, id_name_list):
-        '''takes a list of usernames and returns a list of ids'''
-        id_list = []
-        for id_name in id_name_list:
-            if re.search(r'^\d+$', id_name):
-                id_list.append(id_name)
-            else:
-                profile = self.get_profile(id_name)
-                id_list.append(str(profile['id']))
-        return id_list
 
     def __show_running_time(self, records_amount, count, request_per_window):
         '''used for calculating running time on some queries'''
