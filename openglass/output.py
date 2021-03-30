@@ -72,7 +72,7 @@ class User:
 
 class Tweet:
     def __init__(self, json_entry, output_dir, filename):
-        self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang,link,app'
+        self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang,link,app,media_urls'
         self.id = json_entry['id']
         if 'extended_tweet' in json_entry:
             self.text = json_entry['extended_tweet']['full_text']
@@ -95,6 +95,8 @@ class Tweet:
         else:
             self.app = json_entry['source']
         self.app = self.app.replce('"', '""')
+        urls = json_entry['entities']['urls']
+        self.media_urls = '-'.join([url['expanded_url'] for url in urls])
         self.save_to_file(output_dir, filename)
         for mentioned_user in json_entry.get('entities', {}).get('user_mentions', []):
             Mentions(self.id, mentioned_user['id'], output_dir, filename)
@@ -110,7 +112,8 @@ class Tweet:
         entry += f'{self.possibly_sensitive},'
         entry += f'{self.lang},'
         entry += f'{self.link},'
-        entry += f'"{self.app}"'
+        entry += f'"{self.app}",'
+        entry += f'{self.media_urls}'
         return entry
 
     def save_to_file(self, output_dir, filename):
