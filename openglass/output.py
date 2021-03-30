@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import re
 import os
 import json
 
@@ -71,7 +72,7 @@ class User:
 
 class Tweet:
     def __init__(self, json_entry, output_dir, filename):
-        self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang'
+        self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang,link,app'
         self.id = json_entry['id']
         if 'extended_tweet' in json_entry:
             self.text = json_entry['extended_tweet']['full_text']
@@ -86,6 +87,14 @@ class Tweet:
         self.favorite_count = json_entry.get('favorite_count', None)
         self.possibly_sensitive = json_entry.get('possibly_sensitive', None)
         self.lang = json_entry.get('lang', None)
+        user = json_entry['user']['screen_name']
+        self.link = f'https://twitter.com/{user}/status/{self.id}'
+        match = re.search(r'>(.*?)</a>', json_entry['source'])
+        if match is not None:
+            self.app = match.group(1)
+        else:
+            self.app = json_entry['source']
+        self.app = self.app.replce('"', '""')
         self.save_to_file(output_dir, filename)
         for mentioned_user in json_entry.get('entities', {}).get('user_mentions', []):
             Mentions(self.id, mentioned_user['id'], output_dir, filename)
@@ -99,7 +108,9 @@ class Tweet:
         entry += f'{self.retweet_count},'
         entry += f'{self.favorite_count},'
         entry += f'{self.possibly_sensitive},'
-        entry += f'{self.lang}'
+        entry += f'{self.lang},'
+        entry += f'{self.link},'
+        entry += f'"{self.app}"'
         return entry
 
     def save_to_file(self, output_dir, filename):
