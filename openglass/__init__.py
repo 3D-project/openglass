@@ -75,10 +75,10 @@ def main(cwd=None):
         help="Specify the terms to search for old tweets",
     )
     parser.add_argument(
-        "--search-new",
+        "--watch-search",
         metavar="SEARCH QUERY",
         default=None,
-        help="Specify the terms to search for new tweets",
+        help="Specify the terms to search for new tweets (can be used with --watch-users)",
     )
     parser.add_argument(
         "--timeline",
@@ -123,10 +123,10 @@ def main(cwd=None):
         help="Specify the tweets to retrieve the new retweeters",
     )
     parser.add_argument(
-        "--watch",
+        "--watch-users",
         metavar="USERNAMES OR IDS",
         default=None,
-        help="Specify the users to retrieve all their new tweets and their retweets",
+        help="Specify the users to retrieve all their new tweets and their retweets (can be used with --watch-search)",
     )
     parser.add_argument(
         "--run-for",
@@ -212,12 +212,13 @@ def main(cwd=None):
         print('decide between --twitter and --telegram')
         return
 
-    twitter_actions = ['search', 'search_new', 'timeline', 'timeline_new', 'profile', 'followers', 'friends', 'retweeters', 'retweeters_new', 'watch']
+    twitter_actions = ['search', 'watch_search', 'timeline', 'timeline_new', 'profile', 'followers', 'friends', 'retweeters', 'retweeters_new', 'watch_users']
     num_actions = sum([1 for elem in twitter_actions if getattr(args, elem) is not None])
 
     if args.twitter and num_actions != 1:
-        print('select one twitter action')
-        return
+        if not (num_actions == 2 and args.watch_search and args.watch_users):
+            print('select one twitter action')
+            return
     if args.telegram and num_actions != 0:
         print('twitter options are not allowded with --telegram')
 
@@ -299,11 +300,18 @@ def main(cwd=None):
                 t.search(args.search, entry_handler)
             except KeyboardInterrupt:
                 pass
-        if args.search_new:
+        if args.watch_search or args.watch_users:
             print('Press Ctrl-C to exit')
-            filename = 'search_new_{}'.format(args.search_new.replace(' ', '_'))
+            name = ''
+            if args.watch_search:
+                name += args.watch_search.replace(' ', '_')
+                args.watch_search = args.watch_search.split(' ')
+            if args.watch_users:
+                name += args.watch_users.replace(' ', '_')
+                args.watch_users = args.watch_users.split(' ')
+            filename = 'watch_{}'.format(name)
             try:
-                t.search_new(args.search_new, entry_handler)
+                t.watch(args.watch_users, args.watch_search, entry_handler)
             except KeyboardInterrupt:
                 pass
         elif args.timeline:
@@ -354,13 +362,6 @@ def main(cwd=None):
                 t.get_retweeters_new(args.retweeters_new.split(' '), entry_handler)
             except KeyboardInterrupt:
                 pass
-        elif args.watch:
-            print('Press Ctrl-C to exit')
-            filename = 'watch_{}'.format(args.watch.replace(' ', '_'))
-            try:
-                t.watch(args.watch.split(' '), entry_handler)
-            except KeyboardInterrupt:
-                pass
 
     if args.telegram:
         if args.config:
@@ -390,6 +391,7 @@ def main(cwd=None):
         return
 
     files = glob.glob(f'{args.output}/*{start_time}*')
+    print('')
     for filename in files:
         print('[+] created {}'.format(filename))
 

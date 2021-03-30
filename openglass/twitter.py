@@ -322,56 +322,45 @@ class Twitter:
 
         self.__query_api_with_cursor('/search/tweets', callback, 'search', q=q, count=count)
 
-    def stream_callback(self, obj, tweet, entry_handler):
-        is_retweet = 'retweeted_status' in tweet
-        is_reply = tweet['in_reply_to_status_id_str'] is not None
-        is_quote = 'quoted_status' in tweet
-
-        entry = {}
-        if is_retweet:
-            entry['type'] = 'retweet'
-        elif is_reply:
-            entry['type'] = 'reply'
-            entry['replied_to'] = self.statuses_lookup([tweet['in_reply_to_status_id_str']])[0]
-        elif is_quote:
-            entry['type'] = 'quote'
-        else:
-            entry['type'] = 'tweet'
-
-        entities = tweet.get('entities', {})
-        user_mentions = entities.get('user_mentions', [])
-        profiles = [self.get_profile(um['id_str']) for um in user_mentions]
-        tweet['entities']['user_mentions'] = profiles
-
-        entry['tweet'] = tweet
-        entry_handler(self, entry)
-
-    def search_new(self, q, entry_handler):
-        '''returns new tweets that match the search'''
-        if self.type == '':
-            self.type = 'search_new'
-
-        def callback(obj, entry):
-            self.stream_callback(obj, entry, entry_handler)
-
-        self.__query_api_with_stream(callback, track=q.split(' '))
-
-    def watch(self, users, entry_handler):
+    def watch(self, users, search, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
             self.type = 'watch'
-        user_ids = []
-        for user in users:
-            profile = self.get_profile(user)
-            if profile['protected']:
-                print('the account {} is not public'.format(profile['screen_name']))
-                return
-            user_ids.append(profile['id_str'])
+        if users is not None:
+            user_ids = []
+            for user in users:
+                profile = self.get_profile(user)
+                if profile['protected']:
+                    print('the account {} is not public'.format(profile['screen_name']))
+                    return
+                user_ids.append(profile['id_str'])
+            users = user_ids
 
-        def callback(obj, entry):
-            self.stream_callback(obj, entry, entry_handler)
+        def callback(obj, tweet):
+            is_retweet = 'retweeted_status' in tweet
+            is_reply = tweet['in_reply_to_status_id_str'] is not None
+            is_quote = 'quoted_status' in tweet
 
-        self.get_timeline_new(user_ids, callback, get_all=True)
+            entry = {}
+            if is_retweet:
+                entry['type'] = 'retweet'
+            elif is_reply:
+                entry['type'] = 'reply'
+                entry['replied_to'] = self.statuses_lookup([tweet['in_reply_to_status_id_str']])[0]
+            elif is_quote:
+                entry['type'] = 'quote'
+            else:
+                entry['type'] = 'tweet'
+
+            entities = tweet.get('entities', {})
+            user_mentions = entities.get('user_mentions', [])
+            profiles = [self.get_profile(um['id_str']) for um in user_mentions]
+            tweet['entities']['user_mentions'] = profiles
+
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
+
+        self.__query_api_with_stream(callback, follow=users, track=search)
 
     def __name_to_id(self, id_name_list):
         '''takes a list of usernames and returns a list of ids'''
