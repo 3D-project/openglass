@@ -99,7 +99,8 @@ class Tweet:
         self.media_urls = '-'.join([url['expanded_url'] for url in urls])
         self.save_to_file(output_dir, filename)
         for mentioned_user in json_entry.get('entities', {}).get('user_mentions', []):
-            Mentions(self.id, mentioned_user['id'], output_dir, filename)
+            user = User(mentioned_user)
+            Mentions(self.id, user.id, output_dir, filename)
 
     def to_entry(self):
         entry = ''
