@@ -392,7 +392,14 @@ class Twitter:
                 entry['type'] = 'retweet'
             elif is_reply:
                 entry['type'] = 'reply'
-                entry['replied_to'] = self.statuses_lookup([tweet['in_reply_to_status_id_str']])[0]
+                tweet_replied = self.statuses_lookup([tweet['in_reply_to_status_id_str']])
+                if len(tweet_replied) == 1:
+                    entry['replied_to'] = tweet_replied[0]
+                else:
+                    tweet_deleted = {}
+                    tweet_deleted['id'] = tweet['in_reply_to_status_id_str']
+                    tweet_deleted['text'] = 'TWEET DELETED'
+                    entry['replied_to'] = tweet_deleted
             elif is_quote:
                 entry['type'] = 'quote'
             else:
@@ -401,7 +408,7 @@ class Twitter:
             entities = tweet.get('entities', {})
             user_mentions = entities.get('user_mentions', [])
             profiles = [self.get_profile(um['id_str']) for um in user_mentions]
-            profiles = [p for p in profiles if p['name'] not in ['SUSPENDED', 'NOTFOUND']]
+            # profiles = [p for p in profiles if p['name'] not in ['SUSPENDED', 'NOTFOUND']]
             tweet['entities']['user_mentions'] = profiles
 
             entry['tweet'] = tweet

@@ -87,15 +87,15 @@ class Tweet:
         self.favorite_count = json_entry.get('favorite_count', None)
         self.possibly_sensitive = json_entry.get('possibly_sensitive', None)
         self.lang = json_entry.get('lang', None)
-        user = json_entry['user']['screen_name']
+        user = json_entry.get('user', {}).get('screen_name', 'UNKNOWN')
         self.link = f'https://twitter.com/{user}/status/{self.id}'
-        match = re.search(r'>(.*?)</a>', json_entry['source'])
+        match = re.search(r'>(.*?)</a>', json_entry.get('source', 'UNKNOWN'))
         if match is not None:
             self.app = match.group(1)
         else:
-            self.app = json_entry['source']
+            self.app = json_entry.get('source', 'UNKNOWN')
         self.app = self.app.replace('"', '""')
-        urls = json_entry['entities']['urls']
+        urls = json_entry.get('entities', {}).get('urls', [])
         self.media_urls = '-'.join([url['expanded_url'] for url in urls])
         self.save_to_file(output_dir, filename)
         for mentioned_user in json_entry.get('entities', {}).get('user_mentions', []):
