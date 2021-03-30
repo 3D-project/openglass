@@ -1,4 +1,6 @@
-import json
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import platform
 import sys
@@ -20,7 +22,7 @@ class Utility:
             self.platform = "BSD"
 
         path = os.path.dirname(os.path.realpath(__file__))
-        path = os.path.join(path, "../share/version.txt")
+        path = os.path.join(path, "version.txt")
         with open(path) as f:
             self.version = f.read().strip()
 

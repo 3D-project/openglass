@@ -1,15 +1,18 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import re
-import csv
-import sys
 import json
 import uuid
 import time
+import glob
 import argparse
-from datetime import date, datetime
+from datetime import datetime
 from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
+from .output import store_result
 
 
 def main(cwd=None):
@@ -54,6 +57,11 @@ def main(cwd=None):
         "--jsonl",
         action='store_true',
         help="Stores results as jsonl",
+    )
+    parser.add_argument(
+        "--output",
+        metavar="output directory",
+        help="Specify the directory in wich the output should be stored",
     )
     parser.add_argument(
         "--twitter",
@@ -179,58 +187,57 @@ def main(cwd=None):
             )
         return
 
-    if args.jsonl and args.csv:
-        parser.print_help()
+    file_outputs = ['csv', 'jsonl']
+    num_output = sum([1 for elem in file_outputs if getattr(args, elem) is True])
+    if num_output > 1:
+        print('decide between --csv and --jsonl')
         return
 
+    if num_output == 0 and args.output is not None:
+        print('to select an output directory, supply --csv or --jsonl')
+        return
+
+    if args.output is not None:
+        if not os.path.isdir(args.output):
+            print('the output directory does not exist')
+            return
+    else:
+        args.output = os.getcwd()
+
     if not args.telegram and not args.twitter:
-        parser.print_help()
+        print('supply --twitter or --telegram')
         return
 
     if args.telegram and args.twitter:
-        parser.print_help()
+        print('decide between --twitter and --telegram')
         return
 
-    num_actions = 0
-    if args.twitter:
-        if args.search:
-            num_actions += 1
-        if args.search_new:
-            num_actions += 1
-        if args.timeline:
-            num_actions += 1
-        if args.timeline_new:
-            num_actions += 1
-        if args.profile:
-            num_actions += 1
-        if args.followers:
-            num_actions += 1
-        if args.friends:
-            num_actions += 1
-        if args.retweeters:
-            num_actions += 1
-        if args.retweeters_new:
-            num_actions += 1
-        if args.watch:
-            num_actions += 1
+    twitter_actions = ['search', 'search_new', 'timeline', 'timeline_new', 'profile', 'followers', 'friends', 'retweeters', 'retweeters_new', 'watch']
+    num_actions = sum([1 for elem in twitter_actions if getattr(args, elem) is not None])
 
-    if args.telegram:
-        if args.channel_users:
-            num_actions += 1
-        if args.channel_messages:
-            num_actions += 1
+    if args.twitter and num_actions != 1:
+        print('select one twitter action')
+        return
+    if args.telegram and num_actions != 0:
+        print('twitter options are not allowded with --telegram')
 
-    if num_actions != 1:
-        parser.print_help()
+    telegram_actions = ['channel_users', 'channel_messages']
+    num_actions = sum([1 for elem in telegram_actions if getattr(args, elem) is not None])
+
+    if args.telegram and num_actions != 1:
+        print('select one telegram action')
+        return
+    if args.twitter and num_actions != 0:
+        print('telegram options are not allowded with --twitter')
         return
 
     if args.run_for and args.telegram:
-        parser.print_help()
+        print('--run-for can only be used with --twitter')
         return
 
     if args.run_for:
         if re.search(r'^\d+[smhd]$', args.run_for) is None:
-            parser.print_help()
+            print(f'invalid format for --run-for: {args.run_for}')
             return
         amount = args.run_for[:-1]
         span = args.run_for[-1]
@@ -249,7 +256,7 @@ def main(cwd=None):
         try:
             args.max_results = int(args.max_results)
         except ValueError:
-            parser.print_help()
+            print(f'invalid value for --max-results: {args.max_results}')
             return
 
     # Re-load settings, if a custom config was passed in
@@ -273,7 +280,7 @@ def main(cwd=None):
             if args.jsonl or args.csv:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
-            store_result(entry, args.csv, args.jsonl, filename, start_time)
+            store_result(args.output, entry, args.csv, args.jsonl, filename, start_time)
             if args.run_for and time.time() - start_time > args.run_for:
                 raise KeyboardInterrupt
             if args.max_results and number_of_results >= args.max_results:
@@ -303,7 +310,7 @@ def main(cwd=None):
             print('Press Ctrl-C to exit')
             filename = 'timeline_{}'.format(args.timeline.replace(' ', '_'))
             try:
-                t.get_timeline(args.timeline, entry_handler)
+                t.get_timeline(args.timeline, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
         elif args.timeline_new:
@@ -318,19 +325,19 @@ def main(cwd=None):
             profile = t.get_profile(args.profile)
             profile = standarize_entry(t, profile)
             number_of_results += 1
-            store_result(profile, args.csv, args.jsonl, filename, start_time)
+            store_result(args.output, profile, args.csv, args.jsonl, filename, start_time)
         elif args.followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
             try:
-                t.get_followers(args.followers, entry_handler)
+                t.get_followers(args.followers, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
         elif args.friends:
             print('Press Ctrl-C to exit')
             filename = 'friends_{}'.format(args.friends.replace(' ', '_'))
             try:
-                t.get_friends(args.friends, entry_handler)
+                t.get_friends(args.friends, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
         elif args.retweeters:
@@ -376,61 +383,15 @@ def main(cwd=None):
                 res = t.parse_channel_links(res)
             filename = args.channel_messages.replace(' ', '_')
         for entry in res:
-            store_result(entry, args.csv, args.jsonl, filename, start_time)
+            store_result(args.output, entry, args.csv, args.jsonl, filename, start_time)
 
     if number_of_results == 0:
         print('No results')
         return
 
-    if args.jsonl:
-        filename = "{}_{}.jsonl".format(filename, start_time)
-    elif args.csv:
-        filename = "{}_{}.csv".format(filename, start_time)
-    if args.jsonl or args.csv:
-        print('\n[+] created {}'.format(filename))
-
-
-def store_result(entry, csv, jsonl, filename, start_time):
-    '''save the result in as a .csv, .jsonl or print as json'''
-    if csv:
-        filename = "{}_{}.csv".format(filename, start_time)
-        save_as_csv(entry, filename)
-    elif jsonl:
-        filename = "{}_{}.jsonl".format(filename, start_time)
-        save_as_jsonl(entry, filename)
-    else:
-        print(json.dumps(entry, indent=4, sort_keys=True))
-
-
-def save_as_csv(entry, csvfile):
-    """
-    Takes a list of dictionaries as input and outputs a CSV file.
-    """
-    if not os.path.isfile(csvfile):
-        csvfile = open(csvfile, 'w', newline='')
-        fieldnames = entry.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                extrasaction='ignore', delimiter=';')
-        writer.writeheader()
-    else:
-        csvfile = open(csvfile, 'a', newline='')
-        fieldnames = entry.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames,
-                                extrasaction='ignore', delimiter=';')
-
-    writer.writerow(entry)
-
-    csvfile.close()
-
-
-def save_as_jsonl(entry, jsonfile):
-    """
-    Takes an entry as input and saves it in a JSON L file.
-    """
-    # use os module to increase speed
-    fd = os.open(jsonfile, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
-    os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
-    os.close(fd)
+    files = glob.glob(f'{args.output}/*{start_time}*')
+    for filename in files:
+        print('[+] created {}'.format(filename))
 
 
 def search_dict(res_dict, query_value):

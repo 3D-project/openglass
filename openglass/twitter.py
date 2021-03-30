@@ -1,4 +1,8 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import re
+import sys
 import json
 import time
 import uuid
@@ -65,9 +69,9 @@ class Twitter:
         self.search_id = str(uuid.uuid4())
         self.type = ''
 
-    def __query_api_with_cursor(self, url_used, entry_handler, api, **kwargs):
+    def __query_api_with_cursor(self, url_used, entry_handler, apiname, **kwargs):
         '''queries a tweepy api using cursors handling errors and rate limits'''
-        cursor = tweepy.Cursor(api,  **kwargs)
+        cursor = tweepy.Cursor(getattr(self.api, apiname),  **kwargs)
         while True:
             self.current_url = url_used
             try:
@@ -75,33 +79,14 @@ class Twitter:
                     entry_handler(self, from_tweepy_obj_to_json(entry))
                 return
             except RotateKeys:
-                self.__handle_time_limit()
+                self.__handle_rate_limit()
                 old_cursor = cursor
-                cursor = tweepy.Cursor(api, **kwargs)
+                cursor = tweepy.Cursor(getattr(self.api, apiname), **kwargs)
                 cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                 cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
-                continue
-            except http.client.IncompleteRead:
-                time.sleep(5)
-                continue
-            except requests.exceptions.ConnectionError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                if 'status code = 503' in str(e):
-                    time.sleep(60)
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+            except Exception as e:
+                self.__handle_exception(e)
 
     def __query_api_with_stream(self, entry_handler, **kwargs):
         '''queries a tweepy api using streams handling errors and rate limits'''
@@ -113,24 +98,8 @@ class Twitter:
                 return
             except RotateKeys:
                 self.__rotate_apikey()
-                continue
-            except urllib3.exceptions.ProtocolError:
-                time.sleep(5)
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                if 'status code = 503' in str(e):
-                    time.sleep(60)
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+            except Exception as e:
+                self.__handle_exception(e)
 
     def __query_api_raw(self, url_used, api, *args, **kwargs):
         '''queries a tweepy api handling errors and rate limits'''
@@ -140,22 +109,53 @@ class Twitter:
                 result = api(*args, **kwargs)
                 return from_tweepy_obj_to_json(result)
             except tweepy.RateLimitError:
-                self.__handle_time_limit()
-                continue
-            except tweepy.error.TweepError as e:
-                if 'status code = 429' in str(e):
-                    self.__handle_time_limit()
-                    continue
-                if 'status code = 503' in str(e):
-                    time.sleep(60)
-                    continue
-                elif 'Failed to send request' in str(e):
-                    time.sleep(5)
-                    continue
-                else:
-                    print('got unknown error: {}'.format(str(e)))
-                    time.sleep(5)
-                    continue
+                self.__handle_rate_limit()
+            except Exception as e:
+                self.__handle_exception(e)
+
+    def __handle_exception(self, e):
+        '''handle many known from tweepy/twitter'''
+        msg = str(e)
+
+        # exception commonly thrown by cursors
+        if type(e) == http.client.IncompleteRead:
+            time.sleep(5)
+        # exception commonly thrown by cursors
+        elif type(e) == requests.exceptions.ConnectionError:
+            time.sleep(5)
+        # exception commonly thrown by strams
+        elif type(e) == urllib3.exceptions.ProtocolError:
+            time.sleep(5)
+        # tweepy failed to send the request
+        elif 'Failed to send request' in msg:
+            time.sleep(5)
+
+        # twitter specific exception
+        # https://developer.twitter.com/en/support/twitter-api/error-troubleshooting
+
+        # 429
+        # Returned when a request cannot be served due to the App's rate limit having been exhausted for the resource.
+        elif 'Too Many Requests' in msg:
+            self.__handle_rate_limit()
+        # 503
+        # The Twitter servers are up, but overloaded with requests. Try again later.
+        elif 'Service Unavailable' in msg:
+            time.sleep(60)
+        # 89
+        # Corresponds with HTTP 403. The access token used in the request is incorrect or has expired.
+        elif 'Invalid or expired token' in msg:
+            invalid_api_key = self.api_in_use
+            print('got \'Invalid or expired token\' error')
+            print('is this api key valid?\n{}'.format(json.dumps(invalid_api_key, indent=4, sort_keys=True)))
+            if len(self.twitter_apis) == 1:
+                sys.exit()
+            else:
+                print('removing api key...')
+                self.__rotate_apikey()
+                self.twitter_apis = [key for key in self.twitter_apis if key != invalid_api_key]
+        else:
+            # print('got unknown error: {}'.format(str(e)))
+            raise e
 
     def get_retweeters(self, tweet_id, entry_handler):
         '''returns up to 100 user IDs that have retweeted the tweet'''
@@ -174,7 +174,7 @@ class Twitter:
             entry['retweeter_uid'] = retweeter_uid
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/statuses/retweeters/ids', callback, self.api.retweeters, id=tweet_id, count=count)
+        self.__query_api_with_cursor('/statuses/retweeters/ids', callback, 'retweeters', id=tweet_id, count=count)
 
     def statuses_lookup(self, tweet_ids):
         '''returns detail data from a list of tweet ids'''
@@ -207,7 +207,7 @@ class Twitter:
 
         self.get_timeline_new(user_ids, callback)
 
-    def get_followers(self, user, entry_handler):
+    def get_followers(self, user, entry_handler, max_results=None):
         '''returns the followers of a user, ordered from new to old'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-followers-list
         count = 200
@@ -215,16 +215,25 @@ class Twitter:
         if self.type == '':
             self.type = 'get_followers'
         profile = self.get_profile(user)
-        followers_count = profile['followers_count']
+        if profile['protected']:
+            print('the account {} is not public'.format(profile['screen_name']))
+            return
+        if max_results is None:
+            max_results = profile['followers_count']
+        followers_count = min(max_results, profile['followers_count'])
         self.__show_running_time(followers_count, count, request_per_window)
+        number_of_followers = 0
 
         def callback(obj, entry):
-            entry['follows'] = profile['id']
+            nonlocal number_of_followers
+            entry['follows'] = profile
+            entry['follower_number'] = profile['followers_count'] - number_of_followers
             entry_handler(self, entry)
+            number_of_followers += 1
 
-        self.__query_api_with_cursor('/followers/list', callback, self.api.followers, id=user, count=count)
+        self.__query_api_with_cursor('/followers/list', callback, 'followers', id=user, count=count)
 
-    def get_friends(self, user, entry_handler):
+    def get_friends(self, user, entry_handler, max_results=None):
         '''returns the users that the user follows'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-friends-list
         count = 200
@@ -232,15 +241,20 @@ class Twitter:
         if self.type == '':
             self.type = 'get_friends'
         profile = self.get_profile(user)
-        friends_count = profile['friends_count']
+        if profile['protected']:
+            print('the account {} is not public'.format(profile['screen_name']))
+            return
+        if max_results is None:
+            max_results = profile['friends_count']
+        friends_count = min(max_results, profile['friends_count'])
         self.__show_running_time(friends_count, count, request_per_window)
         user_id = self.__name_to_id([user])[0]
 
         def callback(obj, entry):
-            entry['is_followed_by'] = int(user_id)
+            entry['is_followed_by'] = profile
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/friends/list', callback, self.api.friends, id=user_id, count=count)
+        self.__query_api_with_cursor('/friends/list', callback, 'friends', id=user_id, count=count)
 
     def get_profile(self, user):
         '''returns the profile information of a user'''
@@ -251,13 +265,20 @@ class Twitter:
 
         return self.__query_api_raw('/users/show', self.api.get_user, id=user)
 
-    def get_timeline(self, user, entry_handler):
+    def get_timeline(self, user, entry_handler, max_results=None):
         '''returns up to 3.200 of a user's most recent tweets'''
         # https://developer.twitter.com/en/docs/twitter-api/v1/tweets/timelines/api-reference/get-statuses-user_timeline
         count = 200
         request_per_window = 1500
+        if self.type == '':
+            self.type = 'get_timeline'
         profile = self.get_profile(user)
-        statuses_count = min(3200, profile['statuses_count'])
+        if profile['protected']:
+            print('the account {} is not public'.format(profile['screen_name']))
+            return
+        if max_results is None:
+            max_results = profile['statuses_count']
+        statuses_count = min(3200, max_results, profile['statuses_count'])
         self.__show_running_time(statuses_count, count, request_per_window)
         if self.type == '':
             self.type = 'get_timeline'
@@ -266,16 +287,22 @@ class Twitter:
             entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/statuses/user_timeline', callback, self.api.user_timeline, id=user, include_rts=True, count=count)
+        self.__query_api_with_cursor('/statuses/user_timeline', callback, 'user_timeline', id=user, include_rts=True, count=count)
 
-    def get_timeline_new(self, user_ids, entry_handler):
+    def get_timeline_new(self, users, entry_handler, get_all=False):
         '''returns new tweets of a list of users'''
         if self.type == '':
             self.type = 'get_timeline_new'
-        user_ids = self.__name_to_id(user_ids)
+        user_ids = []
+        for user in users:
+            profile = self.get_profile(user)
+            if profile['protected']:
+                print('the account {} is not public'.format(profile['screen_name']))
+                return
+            user_ids.append(profile['id_str'])
 
         def callback(obj, entry):
-            if entry['user']['id_str'] in user_ids:
+            if get_all or entry['user']['id_str'] in user_ids:
                 entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
                 entry_handler(self, entry)
 
@@ -293,7 +320,34 @@ class Twitter:
             entry['search'] = q
             entry_handler(self, entry)
 
-        self.__query_api_with_cursor('/search/tweets', callback, self.api.search, q=q, count=count)
+        self.__query_api_with_cursor('/search/tweets', callback, 'search', q=q, count=count)
+
+    def stream_callback(self, obj, tweet, entry_handler):
+        is_retweet = 'retweeted_status' in tweet
+        is_reply = tweet['in_reply_to_status_id_str'] is not None
+        is_quote = 'quoted_status' in tweet
+
+        if is_retweet:
+            entry = {}
+            entry['type'] = 'retweet'
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
+        elif is_reply:
+            entry = {}
+            entry['type'] = 'reply'
+            entry['tweet'] = tweet
+            entry['replied_to'] = self.statuses_lookup([tweet['in_reply_to_status_id_str']])[0]
+            entry_handler(self, entry)
+        elif is_quote:
+            entry = {}
+            entry['type'] = 'quote'
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
+        else:
+            entry = {}
+            entry['type'] = 'tweet'
+            entry['tweet'] = tweet
+            entry_handler(self, entry)
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
@@ -301,57 +355,26 @@ class Twitter:
             self.type = 'search_new'
 
         def callback(obj, entry):
-            entry['search'] = q
-            entry_handler(self, entry)
+            self.stream_callback(obj, entry, entry_handler)
 
         self.__query_api_with_stream(callback, track=q.split(' '))
 
-    def watch(self, user_ids, entry_handler):
+    def watch(self, users, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
             self.type = 'watch'
-        user_ids = self.__name_to_id(user_ids)
-        start_time = time.time()
-        collected_data = []
-        tweets_by_user = {}
-        for user_id in user_ids:
-            tweets_by_user[int(user_id)] = []
+        user_ids = []
+        for user in users:
+            profile = self.get_profile(user)
+            if profile['protected']:
+                print('the account {} is not public'.format(profile['screen_name']))
+                return
+            user_ids.append(profile['id_str'])
 
-        def callback(obj, tweet):
-            is_own_tweet = str(tweet['user']['id']) in user_ids
-            is_retweet = 'retweeted_status' in tweet
-            if is_retweet and tweet['retweeted_status']['user']['id_str'] not in user_ids:
-                return  # the user was probably tagged
-            if not is_own_tweet and is_retweet:
-                entry = {}
-                entry['type'] = 'retweet'
-                entry['retweeted_uid'] = tweet['retweeted_status']['user']['id']
-                entry['retweeter_uid'] = tweet['user']['id']
-                entry['retweeted_tid'] = tweet['retweeted_status']['id']
-                entry['retweeter_tid'] = tweet['id']
-                entry['tweet'] = tweet
-                entry_handler(self, entry)
+        def callback(obj, entry):
+            self.stream_callback(obj, entry, entry_handler)
 
-                if tweet['retweeted_status']['id'] not in tweets_by_user[tweet['retweeted_status']['user']['id']]:
-                    entry = {}
-                    entry['type'] = 'old_tweet'
-                    entry['uid'] = tweet['retweeted_status']['user']['id']
-                    entry['tid'] = tweet['retweeted_status']['id']
-                    entry['tweet'] = self.statuses_lookup([tweet['retweeted_status']['id']])[0]
-                    entry_handler(self, entry)
-                    tweets_by_user[tweet['retweeted_status']['user']['id']].append(tweet['retweeted_status']['id'])
-            elif is_own_tweet:
-                entry = {}
-                entry['type'] = 'new_tweet'
-                entry['uid'] = tweet['user']['id']
-                entry['tid'] = tweet['id']
-                entry['tweet'] = tweet
-                entry_handler(self, entry)
-                tweets_by_user[tweet['user']['id']].append(tweet['id'])
-            else:
-                pass  # somebody responded a tweet
-
-        self.get_timeline_new(user_ids, callback)
+        self.get_timeline_new(user_ids, callback, get_all=True)
 
     def __name_to_id(self, id_name_list):
         '''takes a list of usernames and returns a list of ids'''
@@ -427,7 +450,7 @@ class Twitter:
                     time.sleep(5)
                     continue
 
-    def __handle_time_limit(self):
+    def __handle_rate_limit(self):
         '''
         changes the API key being used based on their expiration status
         if all keys are expired, it waits the smallest amount of time possible
