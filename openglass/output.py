@@ -70,7 +70,11 @@ class Tweet:
     def __init__(self, json_entry, output_dir, filename):
         self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang'
         self.id = json_entry['id']
-        self.text = json_entry['text'].replace('"', '""')
+        if 'extended_tweet' in json_entry:
+            self.text = json_entry['extended_tweet']['full_text']
+        else:
+            self.text = json_entry['text']
+        self.text = self.text.replace('"', '""')
         self.truncated = json_entry.get('truncated', False)
         self.in_reply_to_status_id = json_entry.get('in_reply_to_user_id', None) # this should be a relation
         self.in_reply_to_user_id = json_entry.get('in_reply_to_user_id', None)  # this should be a relation
