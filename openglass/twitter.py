@@ -327,27 +327,24 @@ class Twitter:
         is_reply = tweet['in_reply_to_status_id_str'] is not None
         is_quote = 'quoted_status' in tweet
 
+        entry = {}
         if is_retweet:
-            entry = {}
             entry['type'] = 'retweet'
-            entry['tweet'] = tweet
-            entry_handler(self, entry)
         elif is_reply:
-            entry = {}
             entry['type'] = 'reply'
-            entry['tweet'] = tweet
             entry['replied_to'] = self.statuses_lookup([tweet['in_reply_to_status_id_str']])[0]
-            entry_handler(self, entry)
         elif is_quote:
-            entry = {}
             entry['type'] = 'quote'
-            entry['tweet'] = tweet
-            entry_handler(self, entry)
         else:
-            entry = {}
             entry['type'] = 'tweet'
-            entry['tweet'] = tweet
-            entry_handler(self, entry)
+
+        entities = tweet.get('entities', {})
+        user_mentions = entities.get('user_mentions', [])
+        profiles = [self.get_profile(um['id_str']) for um in user_mentions]
+        tweet['entities']['user_mentions'] = profiles
+
+        entry['tweet'] = tweet
+        entry_handler(self, entry)
 
     def search_new(self, q, entry_handler):
         '''returns new tweets that match the search'''
