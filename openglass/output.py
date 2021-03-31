@@ -8,12 +8,14 @@ import json
 # global variables used to avoid duplicating entries in the csv files
 user_v_saved = []
 tweet_v_saved = []
+hashtag_v_saved = []
 follows_e_saved = []
 followed_e_saved = []
 tweets_e_saved = []
 retweets_e_saved = []
 responds_e_saved = []
 mentions_e_saved = []
+usesht_e_saved = []
 
 
 class User:
@@ -63,7 +65,7 @@ class User:
         return entry
 
     def save_to_file(self, output_dir, filename):
-        global users_saved
+        global user_v_saved
         if self.id in user_v_saved:
             return
         filename = f'{output_dir}/users_{filename}'
@@ -78,7 +80,7 @@ class User:
 
 class Tweet:
     def __init__(self, json_entry, output_dir, filename):
-        self.header ='uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang,link,app,media_urls'
+        self.header = 'uid,text,truncated,is_quote_status,retweet_count,favorite_count,possibly_sensitive,lang,link,app,media_urls'
         self.id = json_entry['id']
         if 'extended_tweet' in json_entry:
             self.text = json_entry['extended_tweet']['full_text']
@@ -102,9 +104,15 @@ class Tweet:
         urls = json_entry.get('entities', {}).get('urls', [])
         self.media_urls = '-'.join([url['expanded_url'] for url in urls])
         self.save_to_file(output_dir, filename)
+
         for mentioned_user in json_entry.get('entities', {}).get('user_mentions', []):
             user = User(mentioned_user, output_dir, filename)
             Mentions(self.id, user.id, output_dir, filename)
+
+        for ht in json_entry.get('entities', {}).get('hashtags', []):
+            hashtag = ht['text']
+            Hashtag(hashtag, output_dir, filename)
+            UsesHT(self.id, hashtag, output_dir, filename)
 
     def to_entry(self):
         entry = ''
@@ -122,7 +130,7 @@ class Tweet:
         return entry
 
     def save_to_file(self, output_dir, filename):
-        global tweets_saved
+        global tweet_v_saved
         if self.id in tweet_v_saved:
             return
         filename = f'{output_dir}/tweets_{filename}'
@@ -133,6 +141,31 @@ class Tweet:
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
         tweet_v_saved.append(self.id)
+
+
+class Hashtag:
+    def __init__(self, name, output_dir, filename):
+        self.header = 'name'
+        self.name = name
+        self.save_to_file(output_dir, filename)
+
+    def to_entry(self):
+        entry = ''
+        entry += f'{self.name}'
+        return entry
+
+    def save_to_file(self, output_dir, filename):
+        global hashtag_v_saved
+        if self.name in hashtag_v_saved:
+            return
+        filename = f'{output_dir}/hashtags_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+        hashtag_v_saved.append(self.name)
 
 
 class Follows:
@@ -297,6 +330,33 @@ class Mentions:
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
         mentions_e_saved.append((self.t_mentioner_id, self.u_mentioned_id))
+
+
+class UsesHT:
+    def __init__(self, tweet_id, hashtag, output_dir, filename):
+        self.header = 'tweet_id,hashtag'
+        self.tweet_id = tweet_id
+        self.hashtag = hashtag
+        self.save_to_file(output_dir, filename)
+
+    def to_entry(self):
+        entry = ''
+        entry += f'{self.tweet_id},'
+        entry += f'{self.hashtag}'
+        return entry
+
+    def save_to_file(self, output_dir, filename):
+        global usesht_e_saved
+        if (self.tweet_id, self.hashtag) in usesht_e_saved:
+            return
+        filename = f'{output_dir}/usesht_{filename}'
+        store_header = not os.path.isfile(filename)
+        fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+        if store_header:
+            os.write(fd, self.header.encode('utf-8') + b'\n')
+        os.write(fd, self.to_entry().encode('utf-8') + b'\n')
+        os.close(fd)
+        usesht_e_saved.append((self.tweet_id, self.hashtag))
 
 
 def followers_to_csv(entry, output_dir, filename):
