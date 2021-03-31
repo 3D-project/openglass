@@ -80,8 +80,6 @@ class Tweet:
             self.text = json_entry['text']
         self.text = self.text.replace('"', '""')
         self.truncated = json_entry.get('truncated', False)
-        self.in_reply_to_status_id = json_entry.get('in_reply_to_user_id', None) # this should be a relation
-        self.in_reply_to_user_id = json_entry.get('in_reply_to_user_id', None)  # this should be a relation
         self.is_quote_status = json_entry.get('is_quote_status', None)
         self.retweet_count = json_entry.get('retweet_count', None)
         self.favorite_count = json_entry.get('favorite_count', None)
