@@ -94,9 +94,9 @@ def main(cwd=None):
     )
     parser.add_argument(
         "--profile",
-        metavar="USERNAME OR ID",
+        metavar="USERNAMES OR IDS",
         default=None,
-        help="Specify the user to retrieve its profile",
+        help="Specify the users to retrieve their profile",
     )
     parser.add_argument(
         "--followers",
@@ -329,11 +329,12 @@ def main(cwd=None):
             except KeyboardInterrupt:
                 pass
         elif args.profile:
+            # profile is different from the rest as is not async
             filename = 'profile_{}'.format(args.profile.replace(' ', '_'))
-            profile = t.get_profile(args.profile)
-            profile = standarize_entry(t, profile)
-            number_of_results += 1
-            store_result(args.output, profile, args.csv, args.jsonl, filename, start_time)
+            users = args.profile.split(' ')
+            for user in users:
+                profile = t.get_profile(user)
+                entry_handler(t, profile)
         elif args.followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
