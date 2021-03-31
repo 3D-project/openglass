@@ -6,8 +6,14 @@ import os
 import json
 
 # global variables used to avoid duplicating entries in the csv files
-users_saved = []
-tweets_saved = []
+user_v_saved = []
+tweet_v_saved = []
+follows_e_saved = []
+followed_e_saved = []
+tweets_e_saved = []
+retweets_e_saved = []
+responds_e_saved = []
+mentions_e_saved = []
 
 
 class User:
@@ -58,16 +64,16 @@ class User:
 
     def save_to_file(self, output_dir, filename):
         global users_saved
-        filename = f'{output_dir}/users_{filename}'
-        if self.id in users_saved:
+        if self.id in user_v_saved:
             return
+        filename = f'{output_dir}/users_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
-        users_saved.append(self.id)
+        user_v_saved.append(self.id)
 
 
 class Tweet:
@@ -117,16 +123,16 @@ class Tweet:
 
     def save_to_file(self, output_dir, filename):
         global tweets_saved
-        filename = f'{output_dir}/tweets_{filename}'
-        if self.id in tweets_saved:
+        if self.id in tweet_v_saved:
             return
+        filename = f'{output_dir}/tweets_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
         if store_header:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
-        tweets_saved.append(self.id)
+        tweet_v_saved.append(self.id)
 
 
 class Follows:
@@ -145,6 +151,9 @@ class Follows:
         return entry
 
     def save_to_file(self, output_dir, filename):
+        global follows_e_saved
+        if (self.follower_id, self.followed_id) in follows_e_saved:
+            return
         filename = f'{output_dir}/follows_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
@@ -152,6 +161,7 @@ class Follows:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
+        follows_e_saved.append((self.follower_id, self.followed_id))
 
 
 class Followed:
@@ -168,6 +178,9 @@ class Followed:
         return entry
 
     def save_to_file(self, output_dir, filename):
+        global follows_e_saved
+        if (self.followed_id, self.follower_id) in follows_e_saved:
+            return
         filename = f'{output_dir}/followed_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
@@ -175,6 +188,7 @@ class Followed:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
+        follows_e_saved.append((self.followed_id, self.follower_id))
 
 
 class Tweeted:
@@ -191,6 +205,9 @@ class Tweeted:
         return entry
 
     def save_to_file(self, output_dir, filename):
+        global tweets_e_saved
+        if (self.user_id, self.tweet_id) in tweets_e_saved:
+            return
         filename = f'{output_dir}/tweeted_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
@@ -198,6 +215,7 @@ class Tweeted:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
+        tweets_e_saved.append((self.user_id, self.tweet_id))
 
 
 class Retweeted:
@@ -214,6 +232,9 @@ class Retweeted:
         return entry
 
     def save_to_file(self, output_dir, filename):
+        global retweets_e_saved
+        if (self.t_retweeter_id, self.t_retweeted_id) in retweets_e_saved:
+            return
         filename = f'{output_dir}/retweeted_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
@@ -221,6 +242,7 @@ class Retweeted:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
+        retweets_e_saved.append((self.t_retweeter_id, self.t_retweeted_id))
 
 
 class Replied:
@@ -237,6 +259,9 @@ class Replied:
         return entry
 
     def save_to_file(self, output_dir, filename):
+        global responds_e_saved
+        if (self.t_replier_id, self.t_replied_id) in responds_e_saved:
+            return
         filename = f'{output_dir}/responds_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
@@ -244,6 +269,7 @@ class Replied:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
+        responds_e_saved.append((self.t_replier_id, self.t_replied_id))
 
 
 class Mentions:
@@ -260,6 +286,9 @@ class Mentions:
         return entry
 
     def save_to_file(self, output_dir, filename):
+        global mentions_e_saved
+        if (self.t_mentioner_id, self.u_mentioned_id) in mentions_e_saved:
+            return
         filename = f'{output_dir}/mentions_{filename}'
         store_header = not os.path.isfile(filename)
         fd = os.open(filename, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
@@ -267,6 +296,7 @@ class Mentions:
             os.write(fd, self.header.encode('utf-8') + b'\n')
         os.write(fd, self.to_entry().encode('utf-8') + b'\n')
         os.close(fd)
+        mentions_e_saved.append((self.t_mentioner_id, self.u_mentioned_id))
 
 
 def followers_to_csv(entry, output_dir, filename):
