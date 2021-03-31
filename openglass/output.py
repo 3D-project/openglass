@@ -99,7 +99,7 @@ class Tweet:
         self.media_urls = '-'.join([url['expanded_url'] for url in urls])
         self.save_to_file(output_dir, filename)
         for mentioned_user in json_entry.get('entities', {}).get('user_mentions', []):
-            user = User(mentioned_user)
+            user = User(mentioned_user, output_dir, filename)
             Mentions(self.id, user.id, output_dir, filename)
 
     def to_entry(self):
@@ -317,13 +317,14 @@ def stream_to_csv(entry, output_dir, filename):
         Retweeted(tweet_retweeter.id, tweet_retweeted.id, output_dir, filename)
     elif entry['type'] == 'reply':
         user_replier = User(t['user'], output_dir, filename)
-        user_replied = User(entry['replied_to']['user'], output_dir, filename)
-
         tweet_replier = Tweet(t, output_dir, filename)
-        tweet_replied = Tweet(entry['replied_to'], output_dir, filename)
-
         Tweeted(user_replier.id, tweet_replier.id, output_dir, filename)
-        Tweeted(user_replied.id, tweet_replied.id, output_dir, filename)
+
+        tweet_replied = Tweet(entry['replied_to'], output_dir, filename)
+        # if the tweet does no longer exist, it will not have a user filed
+        if 'user' in entry['replied_to']:
+            user_replied = User(entry['replied_to']['user'], output_dir, filename)
+            Tweeted(user_replied.id, tweet_replied.id, output_dir, filename)
 
         Replied(tweet_replier.id, tweet_replied.id, output_dir, filename)
     elif entry['type'] == 'quote':
