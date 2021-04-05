@@ -370,7 +370,7 @@ class Twitter:
 
         self.__query_api_with_cursor('/search/tweets', callback, 'search', q=q, count=count)
 
-    def watch(self, users, search, languages, entry_handler):
+    def watch(self, users, search, languages, filter_level, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
         if self.type == '':
             self.type = 'watch'
@@ -422,7 +422,11 @@ class Twitter:
             entry['tweet'] = tweet
             entry_handler(self, entry)
 
-        self.__query_api_with_stream(callback, follow=users, track=search, languages=languages)
+        self.__query_api_with_stream(callback,
+                                     follow=users,
+                                     track=search,
+                                     languages=languages,
+                                     filter_level=filter_level)
 
     def __show_running_time(self, records_amount, count, request_per_window):
         '''used for calculating running time on some queries'''
