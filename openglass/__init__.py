@@ -103,9 +103,9 @@ def main(cwd=None):
     )
     mxg_twitter.add_argument(
         "--profile",
-        metavar="USERNAME OR ID",
+        metavar="USERNAMES OR IDS",
         default=None,
-        help="Specify the user to retrieve its profile",
+        help="Specify the users to retrieve their profile",
     )
     mxg_twitter.add_argument(
         "--followers",
@@ -310,10 +310,10 @@ def main(cwd=None):
                 pass
         elif bool(args.profile):
             filename = 'profile_{}'.format('_'.join(args.profile))
-            profile = t.get_profile(args.profile)
-            profile = standarize_entry(t, profile)
-            number_of_results += 1
-            store_result(args.output, profile, args.csv, args.jsonl, filename, start_time)
+            # profile is different from the rest as is not async
+            for user in args.profile:
+                profile = t.get_profile(user)
+                entry_handler(t, profile)
         elif args.followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))

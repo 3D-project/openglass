@@ -81,10 +81,16 @@ class Twitter:
             except RotateKeys:
                 self.__handle_rate_limit()
                 old_cursor = cursor
-                cursor = tweepy.Cursor(getattr(self.api, apiname), **kwargs)
-                cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
-                cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                new_cursor = tweepy.Cursor(getattr(self.api, apiname), **kwargs)
+                try:
+                    new_cursor.iterator.next_cursor = old_cursor.iterator.next_cursor
+                    new_cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
+                    new_cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
+                    cursor = new_cursor
+                except AttributeError:
+                    # for some unknown reason, the old cursor sometimes
+                    # fails with: 'IdIterator' object has no attribute 'next_cursor'
+                    pass
             except Exception as e:
                 self.__handle_exception(e)
 
