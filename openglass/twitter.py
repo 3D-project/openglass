@@ -148,11 +148,13 @@ class Twitter:
         # The Twitter servers are up, but overloaded with requests. Try again later.
         elif 'Service Unavailable' in msg:
             time.sleep(60)
-        # 89
+        # 89 and 32
         # Corresponds with HTTP 403. The access token used in the request is incorrect or has expired.
-        elif 'Invalid or expired token' in msg:
+        # This error generally means that something is either malformed in the request, headers, authorization, or the URI that you are specifying.
+        elif ('Invalid or expired token' in msg or
+              'Could not authenticate you' in msg):
             invalid_api_key = self.api_in_use
-            print('got \'Invalid or expired token\' error')
+            print('got an authentication error')
             print('is this api key valid?\n{}'.format(json.dumps(invalid_api_key, indent=4, sort_keys=True)))
             if len(self.twitter_apis) == 1:
                 sys.exit()
