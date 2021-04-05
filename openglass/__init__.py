@@ -103,7 +103,8 @@ def main(cwd=None):
     )
     mxg_twitter.add_argument(
         "--profile",
-        metavar="USERNAMES OR IDS",
+        metavar="USERNAME1 USERNAME2",
+        nargs='*',
         default=None,
         help="Specify the users to retrieve their profile",
     )
