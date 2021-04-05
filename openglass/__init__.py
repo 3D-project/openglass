@@ -31,11 +31,10 @@ def main(cwd=None):
     parser = argparse.ArgumentParser(
         formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=28)
     )
-
     parser.add_argument(
         "--config",
         metavar="FILENAME",
-        default=None,
+        required=True,
         help="Filename of custom global settings",
     )
     parser.add_argument(
@@ -49,123 +48,145 @@ def main(cwd=None):
         help="Print openglass version",
     )
     parser.add_argument(
-        "--csv",
-        action='store_true',
-        help="Stores results as csv",
+        "--languages",
+        metavar="LANGUAGE1 LANGUAGE2",
+        nargs='*',
+        default=None,
+        help="Specify the list of languages you are interested in",
     )
-    parser.add_argument(
-        "--jsonl",
-        action='store_true',
-        help="Stores results as jsonl",
-    )
-    parser.add_argument(
-        "--output",
-        metavar="output directory",
-        help="Specify the directory in wich the output should be stored",
-    )
-    parser.add_argument(
+    type_group = parser.add_argument_group('mode')
+    mxg_type = type_group.add_mutually_exclusive_group(required=False)
+    mxg_type.add_argument(
         "--twitter",
         action='store_true',
-        help="Query the twitter endpoints. Use search to search, timeline for user's statuses, profile for user's profile",
+        help="Query twitter endpoints",
     )
-    parser.add_argument(
+    mxg_type.add_argument(
+        "--telegram",
+        action='store_true',
+        help="Query telegram enpoints",
+    )
+    twitter_actions = parser.add_argument_group('twitter actions')
+    mxg_twitter = twitter_actions.add_mutually_exclusive_group(required=False)
+    mxg_twitter.add_argument(
         "--search",
-        metavar="SEARCH QUERY",
+        metavar="TERM1 #HashTag",
+        nargs='*',
         default=None,
         help="Specify the terms to search for old tweets",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--watch-search",
-        metavar="SEARCH QUERY",
+        metavar="USERNAME1 USERNAME2",
+        nargs='*',
         default=None,
-        help="Specify the terms to search for new tweets (can be used with --watch-users)",
+        help="Specify the terms to search for new tweets",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
+        "--watch-users",
+        metavar="USERNAME1 USERNAME2",
+        nargs='*',
+        default=None,
+        help="Specify the users to retrieve all their new tweets and their retweets",
+    )
+    mxg_twitter.add_argument(
         "--timeline",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve its past tweets",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--timeline-new",
         metavar="USERNAMES OR IDS",
         default=None,
         help="Specify the users to retrieve their new tweets",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--profile",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve its profile",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--followers",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve the users that follow him/her",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--friends",
         metavar="USERNAME OR ID",
         default=None,
         help="Specify the user to retrieve the users that is following",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--retweeters",
         metavar="TWEET ID",
         default=None,
         help="Specify the tweet to retrieve the users that retweeted it",
     )
-    parser.add_argument(
+    mxg_twitter.add_argument(
         "--retweeters-new",
-        metavar="TWEET IDS",
+        metavar="TWEETID1 TWEETID2",
+        nargs='*',
         default=None,
         help="Specify the tweets to retrieve the new retweeters",
     )
-    parser.add_argument(
-        "--watch-users",
-        metavar="USERNAMES OR IDS",
-        default=None,
-        help="Specify the users to retrieve all their new tweets and their retweets (can be used with --watch-search)",
-    )
-    parser.add_argument(
-        "--run-for",
-        metavar="Amount of time",
-        default=None,
-        help="Specify for how long should openglass run. Example 100s, 5h, 3d",
-    )
-    parser.add_argument(
-        "--max-results",
-        metavar="Max number of results",
-        default=None,
-        help="Specify how many results max should openglass obtain",
-    )
-    parser.add_argument(
-        "--telegram",
-        action='store_true',
-        help="Query telegram enpoints",
-    )
-    parser.add_argument(
+    telegram_actions = parser.add_argument_group('telegram actions')
+    mxg_telegram = telegram_actions.add_mutually_exclusive_group(required=False)
+    mxg_telegram.add_argument(
         "--channel-users",
         metavar="CHANNEL ID",
         default=None,
         help="Query telegram channels and return its users in json",
     )
-    parser.add_argument(
+    mxg_telegram.add_argument(
         "--channel-messages",
         metavar="CHANNEL ID",
         default=None,
         help="Query telegram channels and return its messages in json",
     )
-    parser.add_argument(
+    telegram_actions.add_argument(
         "--domains",
         action='store_true',
         help="Parse links"
     )
-    parser.add_argument(
+    telegram_actions.add_argument(
         "--channel-links",
         action='store_true',
         help="Parse links to telegram channels"
+    )
+    exit_group = parser.add_argument_group('exit options')
+    exit_group.add_argument(
+        "--run-for",
+        metavar="TIME TO RUN",
+        default=None,
+        help="Specify for how long should openglass run. Example 100s, 5h, 3d",
+    )
+    exit_group.add_argument(
+        "--max-results",
+        metavar="NUMBER",
+        type=int,
+        default=None,
+        help="Specify how many results max should openglass obtain",
+    )
+    output_group = parser.add_argument_group('output')
+    mxg_output = output_group.add_mutually_exclusive_group(required=False)
+    mxg_output.add_argument(
+        "--csv",
+        action='store_true',
+        help="Stores results as csv",
+    )
+    mxg_output.add_argument(
+        "--jsonl",
+        action='store_true',
+        help="Stores results as jsonl",
+    )
+    output_group.add_argument(
+        "--output",
+        metavar="DIRECTORY",
+        default=os.getcwd(),
+        help="Specify the directory in wich the output should be stored",
     )
 
     args = parser.parse_args()
@@ -187,54 +208,13 @@ def main(cwd=None):
             )
         return
 
-    file_outputs = ['csv', 'jsonl']
-    num_output = sum([1 for elem in file_outputs if getattr(args, elem) is True])
-    if num_output > 1:
-        print('decide between --csv and --jsonl')
+    if not os.path.isdir(args.output):
+        print('the output directory does not exist')
         return
 
-    if num_output == 0 and args.output is not None:
-        print('to select an output directory, supply --csv or --jsonl')
-        return
+    if args.languages and (not args.watch_users and not args.watch_search):
+        print('the --language option only works with --watch-users and --watch-search')
 
-    if args.output is not None:
-        if not os.path.isdir(args.output):
-            print('the output directory does not exist')
-            return
-    else:
-        args.output = os.getcwd()
-
-    if not args.telegram and not args.twitter:
-        print('supply --twitter or --telegram')
-        return
-
-    if args.telegram and args.twitter:
-        print('decide between --twitter and --telegram')
-        return
-
-    twitter_actions = ['search', 'watch_search', 'timeline', 'timeline_new', 'profile', 'followers', 'friends', 'retweeters', 'retweeters_new', 'watch_users']
-    num_actions = sum([1 for elem in twitter_actions if getattr(args, elem) is not None])
-
-    if args.twitter and num_actions != 1:
-        if not (num_actions == 2 and args.watch_search and args.watch_users):
-            print('select one twitter action')
-            return
-    if args.telegram and num_actions != 0:
-        print('twitter options are not allowded with --telegram')
-
-    telegram_actions = ['channel_users', 'channel_messages']
-    num_actions = sum([1 for elem in telegram_actions if getattr(args, elem) is not None])
-
-    if args.telegram and num_actions != 1:
-        print('select one telegram action')
-        return
-    if args.twitter and num_actions != 0:
-        print('telegram options are not allowded with --twitter')
-        return
-
-    if args.run_for and args.telegram:
-        print('--run-for can only be used with --twitter')
-        return
 
     if args.run_for:
         if re.search(r'^\d+[smhd]$', args.run_for) is None:
@@ -293,25 +273,25 @@ def main(cwd=None):
             utility.load_settings()
 
         t = Twitter(utility.get_setting('twitter_apis'))
-        if args.search:
+        if bool(args.search):
             print('Press Ctrl-C to exit')
-            filename = 'search_{}'.format(args.search.replace(' ', '_'))
+            filename = 'search_{}'.format('_'.join(args.search))
             try:
                 t.search(args.search, entry_handler)
             except KeyboardInterrupt:
                 pass
-        if args.watch_search or args.watch_users:
+        if bool(args.watch_search) or bool(args.watch_users):
             print('Press Ctrl-C to exit')
             name = ''
-            if args.watch_search:
-                name += args.watch_search.replace(' ', '_')
-                args.watch_search = args.watch_search.split(' ')
-            if args.watch_users:
-                name += args.watch_users.replace(' ', '_')
-                args.watch_users = args.watch_users.split(' ')
+            if bool(args.watch_search):
+                name += '_'.join(args.watch_search)
+            if bool(args.watch_users):
+                name += '_'.join(args.watch_users)
+            if bool(args.languages) is False:
+                args.languages = None
             filename = 'watch_{}'.format(name)
             try:
-                t.watch(args.watch_users, args.watch_search, entry_handler)
+                t.watch(args.watch_users, args.watch_search, args.languages, entry_handler)
             except KeyboardInterrupt:
                 pass
         elif args.timeline:
@@ -321,15 +301,15 @@ def main(cwd=None):
                 t.get_timeline(args.timeline, entry_handler, args.max_results)
             except KeyboardInterrupt:
                 pass
-        elif args.timeline_new:
+        elif bool(args.timeline_new):
             print('Press Ctrl-C to exit')
-            filename = 'timeline_new_{}'.format(args.timeline_new.replace(' ', '_'))
+            filename = 'timeline_new_{}'.format('_'.join(args.timeline_new))
             try:
-                t.get_timeline_new(args.timeline_new.split(' '), entry_handler)
+                t.get_timeline_new(args.timeline_new, entry_handler)
             except KeyboardInterrupt:
                 pass
-        elif args.profile:
-            filename = 'profile_{}'.format(args.profile.replace(' ', '_'))
+        elif bool(args.profile):
+            filename = 'profile_{}'.format('_'.join(args.profile))
             profile = t.get_profile(args.profile)
             profile = standarize_entry(t, profile)
             number_of_results += 1
@@ -355,11 +335,11 @@ def main(cwd=None):
                 t.get_retweeters(args.retweeters, entry_handler)
             except KeyboardInterrupt:
                 pass
-        elif args.retweeters_new:
+        elif bool(args.retweeters_new):
             print('Press Ctrl-C to exit')
-            filename = 'retweeters_new_{}'.format(args.retweeters_new.replace(' ', '_'))
+            filename = 'retweeters_new_{}'.format('_'.join(args.retweeters_new))
             try:
-                t.get_retweeters_new(args.retweeters_new.split(' '), entry_handler)
+                t.get_retweeters_new(args.retweeters_new, entry_handler)
             except KeyboardInterrupt:
                 pass
 
