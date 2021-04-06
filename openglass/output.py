@@ -380,16 +380,7 @@ def friends_to_csv(entry, output_dir, filename):
     Followed(followed.id, follower.id, output_dir, filename)
 
 
-def timeline_to_csv(entry, output_dir, filename):
-    '''converts input from the timeline function into csv'''
-    tweet = Tweet(entry, output_dir, filename)
-
-    user = User(entry['user'], output_dir, filename)
-
-    Tweeted(user.id, tweet.id, output_dir, filename)
-
-
-def stream_to_csv(entry, output_dir, filename):
+def tweet_to_csv(entry, output_dir, filename):
     '''converts input from the watch function into csv'''
     t = entry['tweet']
     if entry['type'] == 'retweet':
@@ -457,12 +448,11 @@ def save_as_csv(entry, output_dir, filename):
         profile_to_csv(entry, output_dir, filename)
     elif entry_type == 'get_friends':
         friends_to_csv(entry, output_dir, filename)
-    elif (entry_type == 'get_timeline' or
+    elif (entry_type == 'watch' or
+          entry_type == 'get_timeline' or
           entry_type == 'get_timeline_new' or
           entry_type == 'search'):
-        timeline_to_csv(entry, output_dir, filename)
-    elif entry_type == 'watch' or entry_type == 'search_new':
-        stream_to_csv(entry, output_dir, filename)
+        tweet_to_csv(entry, output_dir, filename)
     else:
         raise Exception('save_as_janus: entry type \'{}\' not supported'.format(entry_type))
 

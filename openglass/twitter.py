@@ -325,9 +325,8 @@ class Twitter:
         if self.type == '':
             self.type = 'get_timeline'
 
-        def callback(obj, entry):
-            entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
-            entry_handler(self, entry)
+        def callback(obj, tweet):
+            self.__handle_tweet(entry_handler, tweet)
 
         self.__query_api_with_cursor('/statuses/user_timeline', callback, 'user_timeline', id=user, include_rts=True, count=count)
 
@@ -349,10 +348,9 @@ class Twitter:
                 return
             user_ids.append(profile['id_str'])
 
-        def callback(obj, entry):
-            if get_all or entry['user']['id_str'] in user_ids:
-                entry['type'] = 'tweet' if 'retweeted_status' not in entry else 'retweet'
-                entry_handler(self, entry)
+        def callback(obj, tweet):
+            if get_all or tweet['user']['id_str'] in user_ids:
+                self.__handle_tweet(entry_handler, tweet)
 
         self.__query_api_with_stream(callback, follow=user_ids)
 
@@ -364,11 +362,12 @@ class Twitter:
         if self.type == '':
             self.type = 'search'
 
-        def callback(obj, entry):
-            entry['search'] = q
-            entry_handler(self, entry)
+        def callback(obj, tweet):
+            tweet['search'] = q
+            self.__handle_tweet(entry_handler, tweet)
 
         self.__query_api_with_cursor('/search/tweets', callback, 'search', q=q, count=count)
+
 
     def watch(self, users, search, languages, filter_level, entry_handler):
         '''saves all the tweets and its retweets for a list of users'''
@@ -391,42 +390,48 @@ class Twitter:
             users = user_ids
 
         def callback(obj, tweet):
-            is_retweet = 'retweeted_status' in tweet
-            is_reply = tweet['in_reply_to_status_id_str'] is not None
-            is_quote = 'quoted_status' in tweet
-
-            entry = {}
-            if is_retweet:
-                entry['type'] = 'retweet'
-            elif is_reply:
-                entry['type'] = 'reply'
-                tweet_replied = self.statuses_lookup([tweet['in_reply_to_status_id_str']])
-                if len(tweet_replied) == 1:
-                    entry['replied_to'] = tweet_replied[0]
-                else:
-                    tweet_deleted = {}
-                    tweet_deleted['id'] = tweet['in_reply_to_status_id_str']
-                    tweet_deleted['text'] = 'TWEET DELETED'
-                    entry['replied_to'] = tweet_deleted
-            elif is_quote:
-                entry['type'] = 'quote'
-            else:
-                entry['type'] = 'tweet'
-
-            entities = tweet.get('entities', {})
-            user_mentions = entities.get('user_mentions', [])
-            profiles = [self.get_profile(um['id_str']) for um in user_mentions]
-            # profiles = [p for p in profiles if p['name'] not in ['SUSPENDED', 'NOTFOUND']]
-            tweet['entities']['user_mentions'] = profiles
-
-            entry['tweet'] = tweet
-            entry_handler(self, entry)
+            self.__handle_tweet(entry_handler, tweet)
 
         self.__query_api_with_stream(callback,
                                      follow=users,
                                      track=search,
                                      languages=languages,
                                      filter_level=filter_level)
+
+    def __handle_tweet(self, entry_handler, tweet):
+        is_retweet = 'retweeted_status' in tweet
+        is_reply = tweet['in_reply_to_status_id_str'] is not None
+        is_quote = 'quoted_status' in tweet
+
+        entry = {}
+        if is_retweet:
+            entry['type'] = 'retweet'
+        elif is_reply:
+            entry['type'] = 'reply'
+            tweet_replied = self.statuses_lookup([tweet['in_reply_to_status_id_str']])
+            if len(tweet_replied) == 1:
+                entry['replied_to'] = tweet_replied[0]
+            else:
+                tweet_deleted = {}
+                tweet_deleted['id'] = tweet['in_reply_to_status_id_str']
+                tweet_deleted['text'] = 'TWEET DELETED'
+                entry['replied_to'] = tweet_deleted
+        elif is_quote:
+            entry['type'] = 'quote'
+        else:
+            entry['type'] = 'tweet'
+
+        entities = tweet.get('entities', {})
+        user_mentions = entities.get('user_mentions', [])
+        profiles = [self.get_profile(um['id_str']) for um in user_mentions]
+        # profiles = [p for p in profiles if p['name'] not in ['SUSPENDED', 'NOTFOUND']]
+        tweet['entities']['user_mentions'] = profiles
+
+        if len(entities['symbols']) > 0:
+            print(tweet)
+
+        entry['tweet'] = tweet
+        entry_handler(self, entry)
 
     def __show_running_time(self, records_amount, count, request_per_window):
         '''used for calculating running time on some queries'''
