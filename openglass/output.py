@@ -145,7 +145,7 @@ class Tweet:
 
 class Hashtag:
     def __init__(self, name, output_dir, filename):
-        self.header = 'name'
+        self.header = 'htname'
         self.name = name
         self.save_to_file(output_dir, filename)
 
