@@ -54,6 +54,12 @@ def main(cwd=None):
         default=None,
         help="Specify the list of languages you are interested in",
     )
+    parser.add_argument(
+        "--filter-level",
+        choices=['none', 'low', 'medium'],
+        default='none',
+        help="Specify the filter_level of the tweets you wish to retreive",
+    )
     type_group = parser.add_argument_group('mode')
     mxg_type = type_group.add_mutually_exclusive_group(required=False)
     mxg_type.add_argument(
@@ -103,7 +109,8 @@ def main(cwd=None):
     )
     mxg_twitter.add_argument(
         "--profile",
-        metavar="USERNAMES OR IDS",
+        metavar="USERNAME1 USERNAME2",
+        nargs='*',
         default=None,
         help="Specify the users to retrieve their profile",
     )
@@ -215,7 +222,6 @@ def main(cwd=None):
     if args.languages and (not args.watch_users and not args.watch_search):
         print('the --language option only works with --watch-users and --watch-search')
 
-
     if args.run_for:
         if re.search(r'^\d+[smhd]$', args.run_for) is None:
             print(f'invalid format for --run-for: {args.run_for}')
@@ -291,7 +297,11 @@ def main(cwd=None):
                 args.languages = None
             filename = 'watch_{}'.format(name)
             try:
-                t.watch(args.watch_users, args.watch_search, args.languages, entry_handler)
+                t.watch(args.watch_users,
+                        args.watch_search,
+                        args.languages,
+                        args.filter_level,
+                        entry_handler)
             except KeyboardInterrupt:
                 pass
         elif args.timeline:
