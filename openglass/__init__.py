@@ -10,11 +10,12 @@ import glob
 import argparse
 import logging
 import logging.handlers
+import multiprocessing
 from datetime import datetime
 from .twitter import Twitter
 from .telegram import Telegram
 from .utility import Utility
-from .output import store_result
+from .output import writer
 
 
 def main(cwd=None):
@@ -68,19 +69,6 @@ def main(cwd=None):
         "--version",
         action='store_true',
         help="Print openglass version",
-    )
-    parser.add_argument(
-        "--languages",
-        metavar="LANGUAGE1 LANGUAGE2",
-        nargs='*',
-        default=None,
-        help="Specify the list of languages you are interested in",
-    )
-    parser.add_argument(
-        "--filter-level",
-        choices=['none', 'low', 'medium'],
-        default='none',
-        help="Specify the filter_level of the tweets you wish to retreive",
     )
     type_group = parser.add_argument_group('mode')
     mxg_type = type_group.add_mutually_exclusive_group(required=False)
@@ -160,6 +148,25 @@ def main(cwd=None):
         nargs='*',
         default=None,
         help="Specify the tweets to retrieve the new retweeters",
+    )
+    tweeter_params = parser.add_argument_group('twitter extra parameters')
+    tweeter_params.add_argument(
+        "--enrich",
+        action='store_true',
+        help="Specify if the tweets obtained should be enriched: get the 'repliad' and 'mentions' edges. It will take longer to run",
+    )
+    tweeter_params.add_argument(
+        "--languages",
+        metavar="LANGUAGE1 LANGUAGE2",
+        nargs='*',
+        default=None,
+        help="Specify the list of languages you are interested in",
+    )
+    tweeter_params.add_argument(
+        "--filter-level",
+        choices=['none', 'low', 'medium'],
+        default='none',
+        help="Specify the filter_level of the tweets you wish to retreive",
     )
     telegram_actions = parser.add_argument_group('telegram actions')
     mxg_telegram = telegram_actions.add_mutually_exclusive_group(required=False)
@@ -282,6 +289,14 @@ def main(cwd=None):
     filename = ''
 
     if args.twitter:
+        if args.config:
+            utility.load_settings(args.config)
+        else:
+            utility.load_settings()
+
+        t = Twitter(utility.get_setting('twitter_apis'))
+        queue = multiprocessing.Queue(1000)
+        flag = multiprocessing.Value('i', 0)  # 0 keep running 1 for finish
 
         def entry_handler(obj, entry):
             nonlocal number_of_results
@@ -289,21 +304,17 @@ def main(cwd=None):
             if args.jsonl or args.csv:
                 print('Number of results: {}'.format(number_of_results), end='\r')
             entry = standarize_entry(obj, entry)
-            store_result(args.output, entry, args.csv, args.jsonl, filename, start_time)
+            queue.put(entry)  # add the entry to the queue
             if args.run_for and time.time() - start_time > args.run_for:
                 raise KeyboardInterrupt
             if args.max_results and number_of_results >= args.max_results:
                 raise KeyboardInterrupt
 
-        if args.config:
-            utility.load_settings(args.config)
-        else:
-            utility.load_settings()
-
-        t = Twitter(utility.get_setting('twitter_apis'))
         if bool(args.search):
             print('Press Ctrl-C to exit')
             filename = 'search_{}'.format('_'.join(args.search))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.search(args.search, entry_handler)
             except KeyboardInterrupt:
@@ -318,6 +329,8 @@ def main(cwd=None):
             if bool(args.languages) is False:
                 args.languages = None
             filename = 'watch_{}'.format(name)
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.watch(args.watch_users,
                         args.watch_search,
@@ -329,6 +342,8 @@ def main(cwd=None):
         elif args.timeline:
             print('Press Ctrl-C to exit')
             filename = 'timeline_{}'.format(args.timeline.replace(' ', '_'))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.get_timeline(args.timeline, entry_handler, args.max_results)
             except KeyboardInterrupt:
@@ -336,12 +351,16 @@ def main(cwd=None):
         elif bool(args.timeline_new):
             print('Press Ctrl-C to exit')
             filename = 'timeline_new_{}'.format('_'.join(args.timeline_new))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.get_timeline_new(args.timeline_new, entry_handler)
             except KeyboardInterrupt:
                 pass
         elif bool(args.profile):
             filename = 'profile_{}'.format('_'.join(args.profile))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             # profile is different from the rest as is not async
             for user in args.profile:
                 profile = t.get_profile(user)
@@ -349,6 +368,8 @@ def main(cwd=None):
         elif args.followers:
             print('Press Ctrl-C to exit')
             filename = 'followers_{}'.format(args.followers.replace(' ', '_'))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.get_followers(args.followers, entry_handler, args.max_results)
             except KeyboardInterrupt:
@@ -356,6 +377,8 @@ def main(cwd=None):
         elif args.friends:
             print('Press Ctrl-C to exit')
             filename = 'friends_{}'.format(args.friends.replace(' ', '_'))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.get_friends(args.friends, entry_handler, args.max_results)
             except KeyboardInterrupt:
@@ -363,6 +386,8 @@ def main(cwd=None):
         elif args.retweeters:
             print('Press Ctrl-C to exit')
             filename = 'retweeters_{}'.format(args.retweeters.replace(' ', '_'))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.get_retweeters(args.retweeters, entry_handler)
             except KeyboardInterrupt:
@@ -370,10 +395,15 @@ def main(cwd=None):
         elif bool(args.retweeters_new):
             print('Press Ctrl-C to exit')
             filename = 'retweeters_new_{}'.format('_'.join(args.retweeters_new))
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             try:
                 t.get_retweeters_new(args.retweeters_new, entry_handler)
             except KeyboardInterrupt:
                 pass
+
+        flag.value = 1
+        p.join()
 
     if args.telegram:
         if args.config:
@@ -406,7 +436,6 @@ def main(cwd=None):
     print('')
     for filename in files:
         print('[+] created {}'.format(filename))
-
 
 def search_dict(res_dict, query_value):
     filtered_dict = []

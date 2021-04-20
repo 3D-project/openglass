@@ -4,6 +4,8 @@
 import re
 import os
 import json
+import time
+import queue
 
 # global variables used to avoid duplicating entries in the csv files
 user_v_saved = []
@@ -380,86 +382,126 @@ def friends_to_csv(entry, output_dir, filename):
     Followed(followed.id, follower.id, output_dir, filename)
 
 
-def tweet_to_csv(entry, output_dir, filename):
+def tweet_to_csv(tweeter, tweet, enrich, output_dir, filename):
     '''converts input from the watch function into csv'''
-    t = entry['tweet']
-    if entry['type'] == 'retweet':
-        user_retweeter = User(t['user'], output_dir, filename)
-        user_retweeted = User(t['retweeted_status']['user'], output_dir, filename)
+    is_retweet = 'retweeted_status' in tweet
+    is_reply = tweet.get('in_reply_to_status_id_str', None) is not None
+    is_quote = 'quoted_status' in tweet
 
-        tweet_retweeted = Tweet(t['retweeted_status'], output_dir, filename)
-        tweet_retweeter = Tweet(t, output_dir, filename)
+    if enrich:
+        entities = tweet.get('entities', {})
+        user_mentions = entities.get('user_mentions', [])
+        profiles = [tweeter.get_profile(um['id_str']) for um in user_mentions if um['id'] not in user_v_saved]
+        tweet['entities']['user_mentions'] = profiles
+    else:
+        tweet['entities'] = {}
+
+    if is_retweet:
+        user_retweeter = User(tweet['user'], output_dir, filename)
+        user_retweeted = User(tweet['retweeted_status']['user'], output_dir, filename)
+
+        tweet_retweeted = Tweet(tweet['retweeted_status'], output_dir, filename)
+        tweet_retweeter = Tweet(tweet, output_dir, filename)
 
         Tweeted(user_retweeted.id, tweet_retweeted.id, output_dir, filename)
         Tweeted(user_retweeter.id, tweet_retweeter.id, output_dir, filename)
 
         Retweeted(tweet_retweeter.id, tweet_retweeted.id, output_dir, filename)
-    elif entry['type'] == 'reply':
-        user_replier = User(t['user'], output_dir, filename)
-        tweet_replier = Tweet(t, output_dir, filename)
+    elif is_reply:
+        user_replier = User(tweet['user'], output_dir, filename)
+        tweet_replier = Tweet(tweet, output_dir, filename)
         Tweeted(user_replier.id, tweet_replier.id, output_dir, filename)
 
-        tweet_replied = Tweet(entry['replied_to'], output_dir, filename)
-        # if the tweet does no longer exist, it will not have a user filed
-        if 'user' in entry['replied_to']:
-            user_replied = User(entry['replied_to']['user'], output_dir, filename)
-            Tweeted(user_replied.id, tweet_replied.id, output_dir, filename)
+        tweet_replied_id = tweet['in_reply_to_status_id']
+        # if the replied tweet is new, save it
+        if enrich and tweet_replied_id not in tweet_v_saved:
+            tweet_replied = tweeter.statuses_lookup([str(tweet_replied_id)])
+            if len(tweet_replied) == 1:
+                tweet_replied_j = tweet_replied[0]
+            else:
+                tweet_replied_j = {}
+                tweet_replied_j['id'] = tweet_replied_id
+                tweet_replied_j['text'] = ''
+            tweet_replied = Tweet(tweet_replied_j, output_dir, filename)
+            # if the tweet does no longer exist, it will not have a user filed
+            if 'user' in tweet_replied_j:
+                user_replied = User(tweet_replied_j['user'], output_dir, filename)
+                Tweeted(user_replied.id, tweet_replied.id, output_dir, filename)
 
-        Replied(tweet_replier.id, tweet_replied.id, output_dir, filename)
-    elif entry['type'] == 'quote':
-        user_quoter = User(t['user'], output_dir, filename)
-        user_quoted = User(t['quoted_status']['user'], output_dir, filename)
+        Replied(tweet_replier.id, tweet_replied_id, output_dir, filename)
+    elif is_quote:
+        user_quoter = User(tweet['user'], output_dir, filename)
+        user_quoted = User(tweet['quoted_status']['user'], output_dir, filename)
 
-        tweet_quoter = Tweet(t, output_dir, filename)
-        tweet_quoted = Tweet(t['quoted_status'], output_dir, filename)
+        tweet_quoter = Tweet(tweet, output_dir, filename)
+        tweet_quoted = Tweet(tweet['quoted_status'], output_dir, filename)
 
         Tweeted(user_quoter.id, tweet_quoter.id, output_dir, filename)
         Tweeted(user_quoted.id, tweet_quoted.id, output_dir, filename)
 
         Retweeted(tweet_quoter.id, tweet_quoted.id, output_dir, filename)
-    elif entry['type'] == 'tweet':
-        user = User(entry['tweet']['user'], output_dir, filename)
+    else:
+        user = User(tweet['user'], output_dir, filename)
 
-        tweet = Tweet(entry['tweet'], output_dir, filename)
+        tweet = Tweet(tweet, output_dir, filename)
 
         Tweeted(user.id, tweet.id, output_dir, filename)
-    else:
-        raise Exception(f'unknown entry type \'{entry["type"]}\' for watch')
 
 
-def store_result(output_dir, entry, csv, jsonl, filename, start_time):
+def store_result(t, entry, args, filename, start_time):
     '''save the result in as a .csv, .jsonl, janus .csv or print as json'''
-    if csv:
+    if args.csv:
         filename = f'{filename}_{start_time}.csv'
-        save_as_csv(entry, output_dir, filename)
-    elif jsonl:
+        save_as_csv(t, entry, args, filename)
+    elif args.jsonl:
         filename = f'{filename}_{start_time}.jsonl'
-        save_as_jsonl(entry, output_dir, filename)
+        save_as_jsonl(entry, args, filename)
     else:
         print(json.dumps(entry, indent=4, sort_keys=True))
 
 
-def save_as_csv(entry, output_dir, filename):
+def save_as_csv(t, entry, args, filename):
     '''Takes an entry as input and saves it in CSV format, optimized for janusgraph'''
     entry_type = entry.get('og_type', None)
     if entry_type == 'get_followers':
-        followers_to_csv(entry, output_dir, filename)
+        followers_to_csv(entry, args.output, filename)
     elif entry_type == 'get_profile':
-        profile_to_csv(entry, output_dir, filename)
+        profile_to_csv(entry, args.output, filename)
     elif entry_type == 'get_friends':
-        friends_to_csv(entry, output_dir, filename)
+        friends_to_csv(entry, args.output, filename)
     elif (entry_type == 'watch' or
           entry_type == 'get_timeline' or
           entry_type == 'get_timeline_new' or
           entry_type == 'search'):
-        tweet_to_csv(entry, output_dir, filename)
+        tweet_to_csv(t, entry, args.enrich, args.output, filename)
     else:
         raise Exception('save_as_janus: entry type \'{}\' not supported'.format(entry_type))
 
 
-def save_as_jsonl(entry, output_dir, jsonfile):
+def save_as_jsonl(entry, args, jsonfile):
     '''Takes an entry as input and saves it in a JSON L file.'''
-    fd = os.open(f'{output_dir}/{jsonfile}', os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
+    fd = os.open(f'{args.output}/{jsonfile}', os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o660)
     os.write(fd, json.dumps(entry).encode('utf-8') + b'\n')
     os.close(fd)
+
+
+def writer(t, q, flag, args, filename, start_time):
+    '''waits entries in the queue and stores the results'''
+    try:
+        printed = False
+        while True:
+            try:
+                if flag.value == 0:
+                    entry = q.get()
+                else:
+                    if not printed:
+                        print('')
+                        printed = True
+                    print(f'Finishing... {q.qsize()}', end='\r')
+                    entry = q.get(True, 1)
+                store_result(t, entry, args, filename, start_time)
+            except KeyboardInterrupt:
+                pass
+    except queue.Empty:
+        pass
 
