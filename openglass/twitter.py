@@ -9,6 +9,7 @@ import uuid
 import http
 import math
 import random
+import logging
 import urllib3
 import requests
 import tweepy
@@ -42,10 +43,12 @@ class StreamListener(tweepy.StreamListener):
             self.__rotate_apikey()
 
     def on_error(self, status_code):
+        logging.debug('error on stream listener')
         self.__rotate_apikey()
         return True
 
     def on_timeout(self):
+        logging.debug('timeout on stream listener')
         self.__rotate_apikey()
         return True
 
@@ -87,9 +90,11 @@ class Twitter:
                     new_cursor.iterator.prev_cursor = old_cursor.iterator.next_cursor
                     new_cursor.iterator.num_tweets = old_cursor.iterator.num_tweets
                     cursor = new_cursor
-                except AttributeError:
+                    logging.debug('created new cursor')
+                except AttributeError as e:
                     # for some unknown reason, the old cursor sometimes
                     # fails with: 'IdIterator' object has no attribute 'next_cursor'
+                    logging.exception('error while creating new cursor: {e}')
                     pass
             except Exception as e:
                 self.__handle_exception(e)
@@ -104,6 +109,7 @@ class Twitter:
                 return
             except RotateKeys:
                 self.__rotate_apikey()
+                log.debug('created new stream')
             except Exception as e:
                 self.__handle_exception(e)
 
@@ -126,15 +132,19 @@ class Twitter:
 
         # exception commonly thrown by cursors
         if type(e) == http.client.IncompleteRead:
+            log.exception('got IncompleteRead, waiting 5 seconds')
             time.sleep(5)
         # exception commonly thrown by cursors
         elif type(e) == requests.exceptions.ConnectionError:
+            log.exception('got ConnectionError, waiting 5 seconds')
             time.sleep(5)
         # exception commonly thrown by strams
         elif type(e) == urllib3.exceptions.ProtocolError:
+            log.exception('got ProtocolError, waiting 5 seconds')
             time.sleep(5)
         # tweepy failed to send the request
         elif 'Failed to send request' in msg:
+            log.exception('Failed to send request, waiting 5 seconds')
             time.sleep(5)
 
         # twitter specific exception
@@ -147,6 +157,7 @@ class Twitter:
         # 503
         # The Twitter servers are up, but overloaded with requests. Try again later.
         elif 'Service Unavailable' in msg:
+            log.info('the twitter service is currently unavailable, waiting one minute')
             time.sleep(60)
         # 89 and 32
         # Corresponds with HTTP 403. The access token used in the request is incorrect or has expired.
@@ -489,10 +500,12 @@ class Twitter:
                 if 'status code = 429' in str(e):
                     raise RotateKeys()
                 elif 'Failed to send request' in str(e):
+                    logging.info('Failed to send request, waiting 5 seconds')
                     time.sleep(5)
                     continue
                 else:
                     print('got unknown error: {}'.format(str(e)))
+                    logging.info('got unknown error: {e}, waiting 5 seconds')
                     time.sleep(5)
                     continue
 

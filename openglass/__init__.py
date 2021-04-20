@@ -8,6 +8,8 @@ import uuid
 import time
 import glob
 import argparse
+import logging
+import logging.handlers
 from datetime import datetime
 from .twitter import Twitter
 from .telegram import Telegram
@@ -26,6 +28,26 @@ def main(cwd=None):
     if utility.platform == "Darwin":
         if cwd:
             os.chdir(cwd)
+
+    loggers = [logger for logger in logging.Logger.manager.loggerDict]
+    for logger in loggers:
+        logging.getLogger(logger).setLevel(logging.ERROR)
+
+    f = logging.Formatter(fmt='%(asctime)s %(levelname)s: %(message)s')
+    handlers = [
+        logging.handlers.RotatingFileHandler('openglass.log',
+                                             encoding='utf8',
+                                             maxBytes=100000,
+                                             backupCount=1),
+        # logging.StreamHandler()
+    ]
+    root_logger = logging.getLogger()
+    level = logging.ERROR
+    root_logger.setLevel(level)
+    for h in handlers:
+        h.setFormatter(f)
+        h.setLevel(level)
+        root_logger.addHandler(h)
 
     # Parse arguments
     parser = argparse.ArgumentParser(
