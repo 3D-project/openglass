@@ -109,7 +109,7 @@ class Twitter:
                 return
             except RotateKeys:
                 self.__rotate_apikey()
-                log.debug('created new stream')
+                logging.debug('created new stream')
             except Exception as e:
                 self.__handle_exception(e)
 
