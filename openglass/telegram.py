@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+import json
+import telethon.sync
 
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError

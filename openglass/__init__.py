@@ -288,15 +288,12 @@ def main(cwd=None):
     number_of_results = 0
     filename = ''
 
+    queue = multiprocessing.Queue(1000)
+    flag = multiprocessing.Value('i', 0)  # 0 keep running 1 for finish
+
     if args.twitter:
-        if args.config:
-            utility.load_settings(args.config)
-        else:
-            utility.load_settings()
 
         t = Twitter(utility.get_setting('twitter_apis'))
-        queue = multiprocessing.Queue(1000)
-        flag = multiprocessing.Value('i', 0)  # 0 keep running 1 for finish
 
         def entry_handler(obj, entry):
             nonlocal number_of_results
@@ -402,21 +399,20 @@ def main(cwd=None):
             except KeyboardInterrupt:
                 pass
 
-        flag.value = 1
-        p.join()
 
     if args.telegram:
-        if args.config:
-            utility.load_settings(args.config)
-        else:
-            utility.load_settings()
 
         t = Telegram(utility.get_setting('telegram'))
 
         if args.channel_users:
-            res = t.get_channel(args.channel_users)
             filename = args.channel_users.replace(' ', '_')
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
+            res = t.get_channel(args.channel_users)
         elif args.channel_messages:
+            filename = args.channel_messages.replace(' ', '_')
+            p = multiprocessing.Process(target=writer, args=(t, queue, flag, args, filename, start_time))
+            p.start()
             res = t.get_messages(args.channel_messages)
             if args.search:
                 res = search_dict(res, args.search)
@@ -424,9 +420,11 @@ def main(cwd=None):
                 res = t.parse_domains(res)
             if args.channel_links:
                 res = t.parse_channel_links(res)
-            filename = args.channel_messages.replace(' ', '_')
         for entry in res:
-            store_result(args.output, entry, args.csv, args.jsonl, filename, start_time)
+            queue.put(entry)  # add the entry to the queue
+
+    flag.value = 1
+    p.join()
 
     if number_of_results == 0:
         print('No results')
