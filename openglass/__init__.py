@@ -399,7 +399,6 @@ def main(cwd=None):
             except KeyboardInterrupt:
                 pass
 
-
     if args.telegram:
 
         t = Telegram(utility.get_setting('telegram'))
@@ -420,6 +419,7 @@ def main(cwd=None):
                 res = t.parse_domains(res)
             if args.channel_links:
                 res = t.parse_channel_links(res)
+        number_of_results += len(res)
         for entry in res:
             queue.put(entry)  # add the entry to the queue
 
