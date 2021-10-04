@@ -132,19 +132,19 @@ class Twitter:
 
         # exception commonly thrown by cursors
         if type(e) == http.client.IncompleteRead:
-            log.exception('got IncompleteRead, waiting 5 seconds')
+            logging.exception('got IncompleteRead, waiting 5 seconds')
             time.sleep(5)
         # exception commonly thrown by cursors
         elif type(e) == requests.exceptions.ConnectionError:
-            log.exception('got ConnectionError, waiting 5 seconds')
+            logging.exception('got ConnectionError, waiting 5 seconds')
             time.sleep(5)
         # exception commonly thrown by strams
         elif type(e) == urllib3.exceptions.ProtocolError:
-            log.exception('got ProtocolError, waiting 5 seconds')
+            logging.exception('got ProtocolError, waiting 5 seconds')
             time.sleep(5)
         # tweepy failed to send the request
         elif 'Failed to send request' in msg:
-            log.exception('Failed to send request, waiting 5 seconds')
+            logging.exception('Failed to send request, waiting 5 seconds')
             time.sleep(5)
 
         # twitter specific exception
@@ -157,7 +157,7 @@ class Twitter:
         # 503
         # The Twitter servers are up, but overloaded with requests. Try again later.
         elif 'Service Unavailable' in msg:
-            log.info('the twitter service is currently unavailable, waiting one minute')
+            logging.info('the twitter service is currently unavailable, waiting one minute')
             time.sleep(60)
         # 89 and 32
         # Corresponds with HTTP 403. The access token used in the request is incorrect or has expired.
